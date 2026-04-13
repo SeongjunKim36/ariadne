@@ -6,7 +6,6 @@ import com.ariadne.scan.ScanStatus;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,11 +74,12 @@ public class GraphQueryService {
             var arn = entry.getKey();
             var properties = entry.getValue();
             var parentArn = parentByChild.get(arn);
+            var parentResourceType = resourceTypeByArn.get(parentArn);
             nodes.add(new GraphResponse.GraphNode(
                     arn,
                     toFrontendType((String) properties.get("resourceType")),
                     properties,
-                    "VPC".equals(resourceTypeByArn.get(parentArn)) ? parentArn : null
+                    isGroupParent(parentResourceType) ? parentArn : null
             ));
         }
 
@@ -194,7 +194,12 @@ public class GraphQueryService {
         return switch (resourceType.toUpperCase(Locale.ROOT)) {
             case "VPC" -> "vpc-group";
             case "SUBNET" -> "subnet-group";
+            case "SECURITY_GROUP" -> "sg";
             default -> resourceType.toLowerCase(Locale.ROOT);
         };
+    }
+
+    private boolean isGroupParent(String resourceType) {
+        return "VPC".equals(resourceType) || "SUBNET".equals(resourceType);
     }
 }
