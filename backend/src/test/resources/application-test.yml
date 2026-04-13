@@ -1,0 +1,11 @@
+spring:
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: test
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ariadne_test
+    username: ariadne
+    password: test

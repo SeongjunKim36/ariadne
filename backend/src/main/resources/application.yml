@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: ariadne
+
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: ariadne-dev
+
+  datasource:
+    url: jdbc:postgresql://localhost:5436/ariadne
+    username: ariadne
+    password: ariadne-dev
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+aws:
+  region: ap-northeast-2
+
+ariadne:
+  scan:
+    schedule: "0 0 * * * *"  # every hour

@@ -1,0 +1,6 @@
+spring:
+  neo4j:
+    uri: bolt://neo4j:7687
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/ariadne
