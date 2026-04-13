@@ -1,9 +1,12 @@
 package com.ariadne.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ecs.EcsClient;
@@ -14,69 +17,81 @@ import software.amazon.awssdk.services.route53.Route53Client;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sts.StsClient;
 
-import java.net.URI;
-
 @Configuration
+@EnableConfigurationProperties(AwsProperties.class)
 public class AwsConfig {
 
-    @Value("${aws.region:ap-northeast-2}")
-    private String region;
+    private final AwsProperties awsProperties;
 
-    @Value("${aws.endpoint-url:#{null}}")
-    private String endpointUrl;
-
-    @Bean
-    Ec2Client ec2Client() {
-        return buildClient(Ec2Client.builder()).build();
+    public AwsConfig(AwsProperties awsProperties) {
+        this.awsProperties = awsProperties;
     }
 
     @Bean
-    RdsClient rdsClient() {
-        return buildClient(RdsClient.builder()).build();
+    AwsCredentialsProvider awsCredentialsProvider() {
+        if (awsProperties.hasStaticCredentials()) {
+            return StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(awsProperties.accessKeyId(), awsProperties.secretAccessKey())
+            );
+        }
+        return DefaultCredentialsProvider.create();
     }
 
     @Bean
-    EcsClient ecsClient() {
-        return buildClient(EcsClient.builder()).build();
+    Ec2Client ec2Client(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(Ec2Client.builder(), credentialsProvider).build();
     }
 
     @Bean
-    ElasticLoadBalancingV2Client elbClient() {
-        return buildClient(ElasticLoadBalancingV2Client.builder()).build();
+    RdsClient rdsClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(RdsClient.builder(), credentialsProvider).build();
     }
 
     @Bean
-    S3Client s3Client() {
+    EcsClient ecsClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(EcsClient.builder(), credentialsProvider).build();
+    }
+
+    @Bean
+    ElasticLoadBalancingV2Client elbClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(ElasticLoadBalancingV2Client.builder(), credentialsProvider).build();
+    }
+
+    @Bean
+    S3Client s3Client(AwsCredentialsProvider credentialsProvider) {
         var builder = S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create());
-        if (endpointUrl != null) {
-            builder.endpointOverride(URI.create(endpointUrl))
+                .region(awsProperties.awsRegion())
+                .credentialsProvider(credentialsProvider);
+        if (awsProperties.hasEndpointOverride()) {
+            builder.endpointOverride(awsProperties.endpointUri())
                     .forcePathStyle(true);
         }
         return builder.build();
     }
 
     @Bean
-    LambdaClient lambdaClient() {
-        return buildClient(LambdaClient.builder()).build();
+    LambdaClient lambdaClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(LambdaClient.builder(), credentialsProvider).build();
     }
 
     @Bean
-    Route53Client route53Client() {
-        return buildClient(Route53Client.builder()).build();
+    Route53Client route53Client(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(Route53Client.builder(), credentialsProvider).build();
     }
 
     @Bean
-    StsClient stsClient() {
-        return buildClient(StsClient.builder()).build();
+    StsClient stsClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(StsClient.builder(), credentialsProvider).build();
     }
 
-    private <B extends software.amazon.awssdk.awscore.client.builder.AwsClientBuilder<B, ?>> B buildClient(B builder) {
-        builder.region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create());
-        if (endpointUrl != null) {
-            builder.endpointOverride(URI.create(endpointUrl));
+    private <B extends software.amazon.awssdk.awscore.client.builder.AwsClientBuilder<B, ?>> B buildClient(
+            B builder,
+            AwsCredentialsProvider credentialsProvider
+    ) {
+        builder.region(awsProperties.awsRegion())
+                .credentialsProvider(credentialsProvider);
+        if (awsProperties.hasEndpointOverride()) {
+            builder.endpointOverride(awsProperties.endpointUri());
         }
         return builder;
     }
