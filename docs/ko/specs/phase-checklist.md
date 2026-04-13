@@ -52,7 +52,7 @@
 |---|---|---|---|---|
 | 1-9 | SecurityGroupCollector 구현 | [x] | 2026-04-13 | VPC 소속 관계 포함 |
 | 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [x] | 2026-04-13 | LocalStack happy-path로 검증 |
-| 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [ ] | | |
+| 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [x] | 2026-04-13 | RDS 태그 수집 + HAS_SG/CONTAINS 포함, LocalStack happy-path는 Docker 환경 복구 후 재검증 |
 | 1-12 | 삭제된 리소스 stale 마킹 로직 | [ ] | | |
 | 1-13 | 수집기 단위 테스트 (모킹) | [x] | 2026-04-13 | SecurityGroupCollectorTest, Ec2CollectorTest |
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
 | 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 15/41 (37%)
+**Phase 1 진행률**: 16/41 (39%)
 
 ---
 

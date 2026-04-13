@@ -737,6 +737,7 @@ services:
         "ec2:DescribeRouteTables",
         "rds:DescribeDBInstances",
         "rds:DescribeDBSubnetGroups",
+        "rds:ListTagsForResource",
         "ecs:ListClusters",
         "ecs:DescribeClusters",
         "ecs:ListServices",
