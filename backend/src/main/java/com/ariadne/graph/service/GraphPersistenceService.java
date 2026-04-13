@@ -82,6 +82,19 @@ public class GraphPersistenceService {
             var rows = group.stream()
                     .map(com.ariadne.graph.relationship.GraphRelationship::toRow)
                     .toList();
+            var sourceArns = group.stream()
+                    .map(com.ariadne.graph.relationship.GraphRelationship::sourceArn)
+                    .distinct()
+                    .toList();
+
+            neo4jClient.query("""
+                            UNWIND $sourceArns AS sourceArn
+                            MATCH (source:AwsResource {arn: sourceArn})-[rel:%s]->()
+                            DELETE rel
+                            """.formatted(type))
+                    .bind(sourceArns)
+                    .to("sourceArns")
+                    .run();
 
             var query = """
                     UNWIND $rows AS row
