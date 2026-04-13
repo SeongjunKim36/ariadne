@@ -20,12 +20,12 @@
 | 0-7 | docker-compose.dev.yml 작성 (LocalStack 포함) | [x] | 2026-04-13 | |
 | 0-8 | application.yml 기본 설정 | [x] | 2026-04-13 | default + docker + dev + test 프로필 |
 | 0-9 | AWS 읽기 전용 IAM 정책 파일 | [x] | 2026-04-13 | iam/ariadne-readonly-policy.json |
-| 0-10 | LocalStack 테스트 환경 구축 확인 | [ ] | | docker-compose.dev.yml 기동 테스트 대기 |
+| 0-10 | LocalStack 테스트 환경 구축 확인 | [x] | 2026-04-13 | Testcontainers LocalStack + `AwsConfigLocalStackTest` 검증 완료 |
 | 0-11 | `docker compose up` + Spring Boot 기동 확인 | [x] | 2026-04-13 | **Phase 0 종료 조건 충족** — Neo4j(healthy) + PostgreSQL(healthy) + Spring Boot(2.8s 기동) |
 | 0-12 | React 프로젝트 초기화 (Vite + TypeScript + Tailwind) | [x] | 2026-04-13 | React Flow, Zustand, SWR 등 의존성 포함 |
 | 0-13 | .gitignore, README 초안 작성 | [x] | 2026-04-13 | .gitignore 완료, README는 Phase 5에서 완성 |
 
-**Phase 0 진행률**: 12/13 (92%) — 0-10(LocalStack 기동 테스트)만 잔여
+**Phase 0 진행률**: 13/13 (100%) — 종료
 
 ---
 
@@ -37,13 +37,13 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-1 | AwsResource 추상 노드 엔티티 (@CompositeProperty tags) | [ ] | | |
-| 1-2 | AwsCollectContext, CollectResult 모델 | [ ] | | |
-| 1-3 | ResourceCollector 인터페이스 | [ ] | | |
-| 1-4 | BaseCollector 추상 클래스 (재시도 + 쓰로틀링) | [ ] | | |
-| 1-5 | VpcCollector 구현 (Paginator 사용) | [ ] | | |
-| 1-6 | SubnetCollector 구현 + BELONGS_TO 관계 | [ ] | | |
-| 1-7 | Neo4j UNIQUE CONSTRAINT + INDEX ���성 스크립트 | [ ] | | |
+| 1-1 | AwsResource 추상 노드 엔티티 (@CompositeProperty tags) | [x] | 2026-04-13 | graph/node/AwsResource 추가 |
+| 1-2 | AwsCollectContext, CollectResult 모델 | [x] | 2026-04-13 | collector 공통 모델 추가 |
+| 1-3 | ResourceCollector 인터페이스 | [x] | 2026-04-13 | ResourceCollector + BaseCollector 추가 |
+| 1-4 | BaseCollector 추상 클래스 (재시도 + 쓰로틀링) | [x] | 2026-04-13 | throttle retry 기본 구현 |
+| 1-5 | VpcCollector 구현 (Paginator 사용) | [x] | 2026-04-13 | LocalStack 통합 테스트로 검증 |
+| 1-6 | SubnetCollector 구현 + BELONGS_TO 관계 | [x] | 2026-04-13 | LocalStack 통합 테스트로 검증 |
+| 1-7 | Neo4j UNIQUE CONSTRAINT + INDEX 생성 스크립트 | [x] | 2026-04-13 | `backend/src/main/resources/neo4j/phase-1-schema.cypher` |
 | 1-8 | LocalStack에 VPC/Subnet 생성 → 수집 → Neo4j Browser 확인 | [ ] | | |
 
 ### Week 2: 핵심 수집기
@@ -62,12 +62,12 @@
 |---|---|---|---|---|
 | 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [ ] | | |
 | 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [ ] | | |
-| 1-16 | ScanRun JPA 엔티티 (PostgreSQL) | [ ] | | |
-| 1-17 | POST /api/scan (202 Accepted + scanId) | [ ] | | |
-| 1-18 | GET /api/scan/{scanId}/status | [ ] | | |
-| 1-19 | GET /api/graph (React Flow 형식) | [ ] | | |
+| 1-16 | ScanRun JPA 엔티티 (PostgreSQL) | [x] | 2026-04-13 | ScanRun + Repository + Service 추가 |
+| 1-17 | POST /api/scan (202 Accepted + scanId) | [x] | 2026-04-13 | ScanController 구현 |
+| 1-18 | GET /api/scan/{scanId}/status | [x] | 2026-04-13 | ScanController 구현 |
+| 1-19 | GET /api/graph (React Flow 형식) | [x] | 2026-04-13 | GraphController + GraphQueryService 구현 |
 | 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [ ] | | |
-| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [ ] | | |
+| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VpcSubnetScanIntegrationTest 추가 |
 
 ### Week 4: 프론��엔드
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
 | 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 0/41 (0%)
+**Phase 1 진행률**: 12/41 (29%)
 
 ---
 
