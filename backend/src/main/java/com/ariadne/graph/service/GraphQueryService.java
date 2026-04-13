@@ -52,7 +52,7 @@ public class GraphQueryService {
 
         for (var edgeRow : edgeRows) {
             var relationshipType = (String) edgeRow.get("relationshipType");
-            if ("BELONGS_TO".equals(relationshipType)) {
+            if ("BELONGS_TO".equals(relationshipType) || "IN_SUBNET_GROUP".equals(relationshipType)) {
                 parentByChild.put((String) edgeRow.get("sourceArn"), (String) edgeRow.get("targetArn"));
             }
         }
@@ -194,12 +194,15 @@ public class GraphQueryService {
         return switch (resourceType.toUpperCase(Locale.ROOT)) {
             case "VPC" -> "vpc-group";
             case "SUBNET" -> "subnet-group";
+            case "DB_SUBNET_GROUP" -> "subnet-group";
             case "SECURITY_GROUP" -> "sg";
             default -> resourceType.toLowerCase(Locale.ROOT);
         };
     }
 
     private boolean isGroupParent(String resourceType) {
-        return "VPC".equals(resourceType) || "SUBNET".equals(resourceType);
+        return "VPC".equals(resourceType)
+                || "SUBNET".equals(resourceType)
+                || "DB_SUBNET_GROUP".equals(resourceType);
     }
 }
