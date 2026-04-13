@@ -50,11 +50,11 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-9 | SecurityGroupCollector 구현 | [ ] | | |
-| 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [ ] | | |
+| 1-9 | SecurityGroupCollector 구현 | [x] | 2026-04-13 | VPC 소속 관계 포함 |
+| 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [x] | 2026-04-13 | LocalStack happy-path로 검증 |
 | 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [ ] | | |
 | 1-12 | 삭제된 리소스 stale 마킹 로직 | [ ] | | |
-| 1-13 | 수집기 단위 테스트 (모킹) | [ ] | | |
+| 1-13 | 수집기 단위 테스트 (모킹) | [x] | 2026-04-13 | SecurityGroupCollectorTest, Ec2CollectorTest |
 
 ### Week 3: ALB + 오케스트레이터 + API
 
@@ -67,7 +67,7 @@
 | 1-18 | GET /api/scan/{scanId}/status | [x] | 2026-04-13 | ScanController 구현 |
 | 1-19 | GET /api/graph (React Flow 형식) | [x] | 2026-04-13 | GraphController + GraphQueryService 구현 |
 | 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [ ] | | |
-| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VpcSubnetScanIntegrationTest 추가 |
+| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VPC/Subnet/SG/EC2 LocalStack 스캔 검증 |
 
 ### Week 4: 프론��엔드
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
 | 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 12/41 (29%)
+**Phase 1 진행률**: 15/41 (37%)
 
 ---
 
