@@ -34,6 +34,8 @@ function HiddenHandles() {
 
 function resolveIcon(kind: string): LucideIcon {
   switch (kind) {
+    case 'cidr':
+      return Globe2;
     case 'ec2':
       return Server;
     case 'rds':
@@ -113,6 +115,7 @@ function GroupNodeCard({ data }: NodeProps<TopologyNodeData>) {
 }
 
 export const topologyNodeTypes = {
+  cidr: ResourceNodeCard,
   ec2: ResourceNodeCard,
   rds: ResourceNodeCard,
   sg: ResourceNodeCard,
