@@ -44,7 +44,7 @@
 | 1-5 | VpcCollector 구현 (Paginator 사용) | [x] | 2026-04-13 | LocalStack 통합 테스트로 검증 |
 | 1-6 | SubnetCollector 구현 + BELONGS_TO 관계 | [x] | 2026-04-13 | LocalStack 통합 테스트로 검증 |
 | 1-7 | Neo4j UNIQUE CONSTRAINT + INDEX 생성 스크립트 | [x] | 2026-04-13 | `backend/src/main/resources/neo4j/phase-1-schema.cypher` |
-| 1-8 | LocalStack에 VPC/Subnet 생성 → 수집 → Neo4j Browser 확인 | [ ] | | |
+| 1-8 | LocalStack에 VPC/Subnet 생성 → 수집 → Neo4j Browser 확인 | [x] | 2026-04-14 | `ariadne-local-vpc` / `ariadne-local-subnet-a` 수집 + Neo4j `BELONGS_TO` 확인 (`subnet-1b70fef0 -> vpc-debba5fc`), LocalStack 미구현 서비스는 warning 처리 |
 
 ### Week 2: 핵심 수집기
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [x] | 2026-04-14 | ResourceQueryService 통합 테스트로 LIKELY_USES 역참조 검증 |
 | 1-41 | 버그 수정 + UI 다듬기 | [x] | 2026-04-14 | scan preflight API, 친절한 AWS 오류 메시지, scan status banner 추가 |
 
-**Phase 1 진행률**: 40/41 (98%)
+**Phase 1 진행률**: 41/41 (100%) — 종료
 
 ---
 

@@ -1,6 +1,6 @@
 # Ariadne — AWS 인프라 맵퍼 기획서
 
-> 상태: Phase 1 진행 중 (서비스 수집기 + Topology 확장 + LIKELY_USES/질문 검증 + E2E + 실계정 검증 완료, LocalStack Browser 수동 확인만 대기) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
+> 상태: Phase 1 완료 (서비스 수집기 + Topology 확장 + LIKELY_USES/질문 검증 + E2E + 실계정 검증 + LocalStack Browser 수동 확인 완료) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
 
 ## 이름의 유래
 
