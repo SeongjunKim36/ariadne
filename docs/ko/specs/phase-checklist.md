@@ -60,7 +60,7 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [ ] | | |
+| 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [x] | 2026-04-14 | ALB → EC2/Lambda 라우팅 + VPC/HAS_SG 포함 |
 | 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [x] | 2026-04-14 | 병렬 수집 + warningMessage 노출 |
 | 1-16 | ScanRun JPA 엔티티 (PostgreSQL) | [x] | 2026-04-13 | ScanRun + Repository + Service 추가 |
 | 1-17 | POST /api/scan (202 Accepted + scanId) | [x] | 2026-04-13 | ScanController 구현 |
@@ -86,12 +86,12 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-30 | EcsCollector (Cluster + Service) + RUNS_IN | [ ] | | |
-| 1-31 | S3Collector + TRIGGERS 관계 | [ ] | | |
-| 1-32 | LambdaCollector + BELONGS_TO(Subnet), HAS_SG | [ ] | | |
-| 1-33 | Route53Collector (region="global") + HAS_RECORD | [ ] | | |
-| 1-34 | 프론트엔드 신규 노드: EcsClusterGroupNode, EcsServiceNode, S3Node, LambdaNode, Route53Node | [ ] | | |
-| 1-35 | 그래프 스키마 안정화 (실 데이터 기반 조정) | [ ] | | |
+| 1-30 | EcsCollector (Cluster + Service) + RUNS_IN | [x] | 2026-04-14 | ECS cluster/service + ALB target group 연동 |
+| 1-31 | S3Collector + TRIGGERS 관계 | [x] | 2026-04-14 | S3 bucket 속성 + Lambda notification 수집 |
+| 1-32 | LambdaCollector + BELONGS_TO(Subnet), HAS_SG | [x] | 2026-04-14 | VPC Lambda subnet/sg 관계 반영 |
+| 1-33 | Route53Collector (region="global") + HAS_RECORD | [x] | 2026-04-14 | ALB/EC2/RDS DNS 매핑 지원 |
+| 1-34 | 프론트엔드 신규 노드: EcsClusterGroupNode, EcsServiceNode, S3Node, LambdaNode, Route53Node | [x] | 2026-04-14 | React Flow 신규 타입/컬러/상세 정보 확장 |
+| 1-35 | 그래프 스키마 안정화 (실 데이터 기반 조정) | [x] | 2026-04-14 | LB/Route53 인덱스 + 타입 매핑 보강 |
 
 ### Week 6: 통합 + 검증
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
 | 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 27/41 (66%)
+**Phase 1 진행률**: 34/41 (83%)
 
 ---
 
