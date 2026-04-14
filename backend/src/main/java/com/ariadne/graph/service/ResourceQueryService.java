@@ -25,7 +25,7 @@ public class ResourceQueryService {
                         MATCH (n:AwsResource {arn: $arn})
                         WHERE coalesce(n.stale, false) = false
                         OPTIONAL MATCH (n)-[r]->(parent:AwsResource)
-                        WHERE type(r) IN [$belongsTo, $inSubnetGroup]
+                        WHERE type(r) IN [$belongsTo, $inSubnetGroup, $runsIn]
                           AND coalesce(parent.stale, false) = false
                         RETURN properties(n) AS properties,
                                parent.arn AS parentArn,
@@ -39,6 +39,8 @@ public class ResourceQueryService {
                 .to("belongsTo")
                 .bind(RelationshipTypes.IN_SUBNET_GROUP)
                 .to("inSubnetGroup")
+                .bind(RelationshipTypes.RUNS_IN)
+                .to("runsIn")
                 .fetch()
                 .one()
                 .orElseThrow(() -> new NoSuchElementException("Unknown active resource arn: " + arn));
@@ -50,7 +52,7 @@ public class ResourceQueryService {
         );
 
         var connectionRows = neo4jClient.query("""
-                        MATCH (source:AwsResource)-[r]-(target:AwsResource)
+                        MATCH (source:AwsResource)-[r]->(target:AwsResource)
                         WHERE (source.arn = $arn OR target.arn = $arn)
                           AND coalesce(source.stale, false) = false
                           AND coalesce(target.stale, false) = false

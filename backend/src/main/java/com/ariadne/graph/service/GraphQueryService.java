@@ -49,24 +49,36 @@ public class GraphQueryService {
                 .all();
 
         var nodesByArn = new LinkedHashMap<String, Map<String, Object>>();
+        var propertiesByArn = new HashMap<String, Map<String, Object>>();
         var parentByChild = new HashMap<String, String>();
+        var neighborsByArn = new HashMap<String, Set<String>>();
         var resourceTypeByArn = new HashMap<String, String>();
 
         for (var edgeRow : edgeRows) {
+            var sourceArn = (String) edgeRow.get("sourceArn");
+            var targetArn = (String) edgeRow.get("targetArn");
             var relationshipType = (String) edgeRow.get("relationshipType");
             if (GraphViewSupport.isParentRelationship(relationshipType)) {
-                parentByChild.put((String) edgeRow.get("sourceArn"), (String) edgeRow.get("targetArn"));
+                parentByChild.put(sourceArn, targetArn);
             }
+            neighborsByArn.computeIfAbsent(sourceArn, ignored -> new HashSet<>()).add(targetArn);
+            neighborsByArn.computeIfAbsent(targetArn, ignored -> new HashSet<>()).add(sourceArn);
         }
 
         for (var nodeRow : nodeRows) {
             @SuppressWarnings("unchecked")
             var properties = new LinkedHashMap<>((Map<String, Object>) nodeRow.get("properties"));
             var arn = (String) properties.get("arn");
+            propertiesByArn.put(arn, properties);
             var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
             resourceTypeByArn.put(arn, resourceType);
+        }
+
+        for (var entry : propertiesByArn.entrySet()) {
+            var arn = entry.getKey();
+            var properties = entry.getValue();
             if (matchesFilters(properties, resourceTypes, environment)
-                    && belongsToVpc(properties, parentByChild, nodesByArn, nodeRows, vpcId)) {
+                    && belongsToVpc(properties, parentByChild, propertiesByArn, neighborsByArn, vpcId)) {
                 nodesByArn.put(arn, properties);
             }
         }
@@ -129,8 +141,8 @@ public class GraphQueryService {
     private boolean belongsToVpc(
             Map<String, Object> properties,
             Map<String, String> parentByChild,
-            Map<String, Map<String, Object>> nodesByArn,
-            java.util.Collection<Map<String, Object>> nodeRows,
+            Map<String, Map<String, Object>> propertiesByArn,
+            Map<String, Set<String>> neighborsByArn,
             String vpcId
     ) {
         if (vpcId == null || vpcId.isBlank()) {
@@ -150,7 +162,7 @@ public class GraphQueryService {
 
             var currentProperties = currentArn.equals(arn)
                     ? properties
-                    : findNodeProperties(currentArn, nodesByArn, nodeRows);
+                    : propertiesByArn.get(currentArn);
             if (currentProperties == null) {
                 continue;
             }
@@ -164,28 +176,14 @@ public class GraphQueryService {
             if (parentArn != null) {
                 queue.add(parentArn);
             }
+
+            for (var neighborArn : neighborsByArn.getOrDefault(currentArn, Set.of())) {
+                if (!visited.contains(neighborArn)) {
+                    queue.add(neighborArn);
+                }
+            }
         }
 
         return false;
-    }
-
-    private Map<String, Object> findNodeProperties(
-            String arn,
-            Map<String, Map<String, Object>> nodesByArn,
-            java.util.Collection<Map<String, Object>> nodeRows
-    ) {
-        var cached = nodesByArn.get(arn);
-        if (cached != null) {
-            return cached;
-        }
-
-        for (var nodeRow : nodeRows) {
-            @SuppressWarnings("unchecked")
-            var properties = (Map<String, Object>) nodeRow.get("properties");
-            if (arn.equals(properties.get("arn"))) {
-                return properties;
-            }
-        }
-        return null;
     }
 }
