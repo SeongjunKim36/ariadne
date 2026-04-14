@@ -56,3 +56,12 @@ export type ScanStatusResponse = {
   errorMessage: string | null;
   warningMessage: string | null;
 };
+
+export type ScanPreflightResponse = {
+  ready: boolean;
+  region: string;
+  accountId: string | null;
+  callerArn: string | null;
+  authenticationMode: 'static' | 'default-chain' | string;
+  message: string;
+};

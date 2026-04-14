@@ -76,6 +76,12 @@ function Shell() {
               <p className="sidebar-status-copy">
                 {latestScan.totalNodes} nodes · {latestScan.totalEdges} edges
               </p>
+              {latestScan.errorMessage ? (
+                <div className="sidebar-warning">
+                  <TriangleAlert size={14} />
+                  <span>{latestScan.errorMessage}</span>
+                </div>
+              ) : null}
               {latestScan.warningMessage ? (
                 <div className="sidebar-warning">
                   <TriangleAlert size={14} />
