@@ -2,6 +2,7 @@ package com.ariadne.collector.ecs;
 
 import com.ariadne.collector.AwsCollectContext;
 import com.ariadne.graph.relationship.RelationshipTypes;
+import com.ariadne.security.RedactionEngine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -164,7 +165,7 @@ class EcsCollectorTest {
                     .build();
         });
 
-        var result = new EcsCollector(ecsClient, elbClient, new ObjectMapper()).collect(CONTEXT);
+        var result = new EcsCollector(ecsClient, elbClient, new ObjectMapper(), new RedactionEngine()).collect(CONTEXT);
 
         assertThat(result.resources()).hasSize(3);
         assertThat(result.relationships()).hasSize(4);
@@ -208,8 +209,10 @@ class EcsCollectorTest {
                 .containsEntry("revision", 5)
                 .containsEntry("containerCount", 1);
         assertThat(String.valueOf(taskDefinitionProperties.get("containers")))
-                .contains("\"SPRING_PROFILES_ACTIVE\",\"value\":\"prod\"")
-                .contains("\"DB_PASSWORD\",\"value\":\"***REDACTED***\"");
+                .contains("\"name\":\"SPRING_PROFILES_ACTIVE\"")
+                .contains("\"value\":\"prod\"")
+                .contains("\"name\":\"DB_PASSWORD\"")
+                .contains("\"value\":\"***REDACTED***\"");
 
         assertThat(result.relationships())
                 .extracting(relationship -> relationship.type(), relationship -> relationship.targetArn())
