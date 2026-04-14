@@ -395,11 +395,20 @@ export function TopologyPage() {
                       if (node.type === 'vpc-group' || node.type === 'subnet-group') {
                         return '#cbd5e1';
                       }
+                      if (node.type === 'ecs-cluster-group') {
+                        return '#94a3b8';
+                      }
                       if (node.type === 'sg') {
                         return '#fb7185';
                       }
                       if (node.type === 'rds') {
                         return '#60a5fa';
+                      }
+                      if (node.type === 'route53' || node.type === 'alb') {
+                        return '#a78bfa';
+                      }
+                      if (node.type === 's3' || node.type === 'ecs-service') {
+                        return '#34d399';
                       }
                       return '#f59e0b';
                     }}

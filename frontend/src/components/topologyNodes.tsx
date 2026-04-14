@@ -1,10 +1,13 @@
 import {
   Boxes,
+  Globe2,
   Database,
   FolderTree,
   Network,
+  Package,
   Server,
   Shield,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { Handle, Position, type NodeProps } from 'reactflow';
@@ -39,6 +42,16 @@ function resolveIcon(kind: string): LucideIcon {
       return Shield;
     case 'alb':
       return Network;
+    case 'ecs-cluster-group':
+      return Boxes;
+    case 'ecs-service':
+      return Package;
+    case 's3':
+      return Package;
+    case 'lambda':
+      return Zap;
+    case 'route53':
+      return Globe2;
     case 'vpc-group':
     case 'subnet-group':
       return FolderTree;
@@ -104,7 +117,12 @@ export const topologyNodeTypes = {
   rds: ResourceNodeCard,
   sg: ResourceNodeCard,
   alb: ResourceNodeCard,
+  'ecs-service': ResourceNodeCard,
+  s3: ResourceNodeCard,
+  lambda: ResourceNodeCard,
+  route53: ResourceNodeCard,
   default: ResourceNodeCard,
   'vpc-group': GroupNodeCard,
   'subnet-group': GroupNodeCard,
+  'ecs-cluster-group': GroupNodeCard,
 };

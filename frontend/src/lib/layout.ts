@@ -12,7 +12,7 @@ const GROUP_GAP = 24;
 const ROOT_GAP = 64;
 
 function isGroupNode(node: GraphNodeRecord) {
-  return node.type === 'vpc-group' || node.type === 'subnet-group';
+  return node.type === 'vpc-group' || node.type === 'subnet-group' || node.type === 'ecs-cluster-group';
 }
 
 function nodeSize(node: GraphNodeRecord) {
@@ -23,6 +23,16 @@ function nodeSize(node: GraphNodeRecord) {
       return { width: 240, height: 104 };
     case 'ec2':
       return { width: 230, height: 102 };
+    case 'alb':
+      return { width: 236, height: 102 };
+    case 'ecs-service':
+      return { width: 228, height: 102 };
+    case 's3':
+      return { width: 230, height: 100 };
+    case 'lambda':
+      return { width: 235, height: 102 };
+    case 'route53':
+      return { width: 235, height: 96 };
     default:
       return { width: 220, height: 96 };
   }
@@ -38,6 +48,14 @@ function accentForType(type: string): TopologyNodeData['accent'] {
       return 'rose';
     case 'alb':
       return 'violet';
+    case 'ecs-service':
+    case 's3':
+      return 'emerald';
+    case 'lambda':
+      return 'amber';
+    case 'route53':
+      return 'violet';
+    case 'ecs-cluster-group':
     case 'vpc-group':
     case 'subnet-group':
       return 'slate';
@@ -73,6 +91,51 @@ function describeNode(node: GraphNodeRecord) {
         subtitle: value(data, 'groupId') || value(data, 'resourceId'),
         detail: `${value(data, 'inboundRuleCount') || '0'} in · ${value(data, 'outboundRuleCount') || '0'} out`,
         status: '',
+      };
+    case 'alb':
+      return {
+        subtitle: [value(data, 'type'), value(data, 'scheme')].filter(Boolean).join(' · '),
+        detail: value(data, 'dnsName'),
+        status: value(data, 'state'),
+      };
+    case 'ecs-cluster-group':
+      return {
+        subtitle: value(data, 'resourceId'),
+        detail: [
+          value(data, 'activeServiceCount') ? `${value(data, 'activeServiceCount')} svc` : '',
+          value(data, 'runningTaskCount') ? `${value(data, 'runningTaskCount')} tasks` : '',
+        ].filter(Boolean).join(' · '),
+        status: value(data, 'status'),
+      };
+    case 'ecs-service':
+      return {
+        subtitle: [
+          value(data, 'launchType'),
+          `${value(data, 'runningCount') || '0'}/${value(data, 'desiredCount') || '0'}`,
+        ].filter(Boolean).join(' · '),
+        detail: value(data, 'taskDefinition'),
+        status: value(data, 'environment'),
+      };
+    case 's3':
+      return {
+        subtitle: value(data, 'resourceId'),
+        detail: [
+          value(data, 'encryptionType'),
+          value(data, 'versioningEnabled') === 'true' ? 'versioned' : 'unversioned',
+        ].filter(Boolean).join(' · '),
+        status: value(data, 'publicAccessBlocked') === 'true' ? 'blocked' : 'check public',
+      };
+    case 'lambda':
+      return {
+        subtitle: [value(data, 'runtime'), `${value(data, 'memoryMb') || '0'} MB`].filter(Boolean).join(' · '),
+        detail: value(data, 'handler'),
+        status: value(data, 'state'),
+      };
+    case 'route53':
+      return {
+        subtitle: value(data, 'domainName') || value(data, 'resourceId'),
+        detail: `${value(data, 'recordCount') || '0'} records`,
+        status: value(data, 'isPrivate') === 'true' ? 'private' : 'public',
       };
     case 'vpc-group':
       return {
