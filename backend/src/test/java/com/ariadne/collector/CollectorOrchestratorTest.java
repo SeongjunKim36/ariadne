@@ -2,6 +2,7 @@ package com.ariadne.collector;
 
 import com.ariadne.config.AwsProperties;
 import com.ariadne.graph.node.Vpc;
+import com.ariadne.graph.service.GraphInferenceService;
 import com.ariadne.graph.service.GraphPersistenceService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,9 @@ class CollectorOrchestratorTest {
 
     @Mock
     private GraphPersistenceService graphPersistenceService;
+
+    @Mock
+    private GraphInferenceService graphInferenceService;
 
     @Mock
     private StsClient stsClient;
@@ -83,6 +87,7 @@ class CollectorOrchestratorTest {
         var orchestrator = new CollectorOrchestrator(
                 List.of(failingCollector, successfulCollector),
                 graphPersistenceService,
+                graphInferenceService,
                 stsClient,
                 new AwsProperties("ap-northeast-2", null, null, null)
         );
@@ -90,13 +95,14 @@ class CollectorOrchestratorTest {
         when(stsClient.getCallerIdentity()).thenReturn(GetCallerIdentityResponse.builder()
                 .account("123456789012")
                 .build());
+        when(graphInferenceService.refreshLikelyUsesRelationships()).thenReturn(2);
 
         var summary = orchestrator.collectAll();
 
         verify(graphPersistenceService).save(resultCaptor.capture(), collectedAtCaptor.capture(), managedTypesCaptor.capture());
         assertThat(resultCaptor.getValue().resources()).hasSize(1);
         assertThat(summary.totalResources()).isEqualTo(1);
-        assertThat(summary.totalRelationships()).isEqualTo(0);
+        assertThat(summary.totalRelationships()).isEqualTo(2);
         assertThat(summary.warnings()).singleElement().asString().contains("Collector RDS failed");
         assertThat(managedTypesCaptor.getValue()).containsExactly("VPC");
         assertThat(collectedAtCaptor.getValue()).isEqualTo(summary.collectedAt());

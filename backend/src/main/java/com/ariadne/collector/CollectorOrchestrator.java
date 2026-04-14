@@ -1,6 +1,7 @@
 package com.ariadne.collector;
 
 import com.ariadne.config.AwsProperties;
+import com.ariadne.graph.service.GraphInferenceService;
 import com.ariadne.graph.service.GraphPersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +23,14 @@ public class CollectorOrchestrator {
 
     private final List<ResourceCollector> collectors;
     private final GraphPersistenceService graphPersistenceService;
+    private final GraphInferenceService graphInferenceService;
     private final StsClient stsClient;
     private final AwsProperties awsProperties;
 
     public CollectorOrchestrator(
             List<ResourceCollector> collectors,
             GraphPersistenceService graphPersistenceService,
+            GraphInferenceService graphInferenceService,
             StsClient stsClient,
             AwsProperties awsProperties
     ) {
@@ -35,6 +38,7 @@ public class CollectorOrchestrator {
                 .sorted(Comparator.comparing(ResourceCollector::resourceType))
                 .toList();
         this.graphPersistenceService = graphPersistenceService;
+        this.graphInferenceService = graphInferenceService;
         this.stsClient = stsClient;
         this.awsProperties = awsProperties;
     }
@@ -59,10 +63,11 @@ public class CollectorOrchestrator {
         }
 
         graphPersistenceService.save(aggregate, context.collectedAt(), managedResourceTypes);
+        var inferredRelationships = inferLikelyUses(warnings);
 
         return new ScanSummary(
                 aggregate.resources().size(),
-                aggregate.relationships().size(),
+                aggregate.relationships().size() + inferredRelationships,
                 context.collectedAt(),
                 warnings
         );
@@ -96,6 +101,17 @@ public class CollectorOrchestrator {
             var warning = "Collector %s failed: %s".formatted(collector.resourceType(), exception.getMessage());
             log.warn(warning, exception);
             return new CollectorOutcome(Set.of(), CollectResult.empty(), warning);
+        }
+    }
+
+    private int inferLikelyUses(List<String> warnings) {
+        try {
+            return graphInferenceService.refreshLikelyUsesRelationships();
+        } catch (RuntimeException exception) {
+            var warning = "Derived relationship inference failed: %s".formatted(exception.getMessage());
+            log.warn(warning, exception);
+            warnings.add(warning);
+            return 0;
         }
     }
 
