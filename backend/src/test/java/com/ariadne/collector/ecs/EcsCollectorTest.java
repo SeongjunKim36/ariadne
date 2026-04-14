@@ -33,9 +33,13 @@ import software.amazon.awssdk.services.ecs.paginators.ListServicesIterable;
 import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
 import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetGroup;
 import software.amazon.awssdk.services.elasticloadbalancingv2.paginators.DescribeTargetGroupsIterable;
+import software.amazon.awssdk.services.ecs.model.LogConfiguration;
+import software.amazon.awssdk.services.ecs.model.RepositoryCredentials;
+import software.amazon.awssdk.services.ecs.model.Secret;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -139,6 +143,24 @@ class EcsCollectorTest {
                                         KeyValuePair.builder().name("SPRING_PROFILES_ACTIVE").value("prod").build(),
                                         KeyValuePair.builder().name("DB_PASSWORD").value("super-secret").build()
                                 )
+                                .secrets(Secret.builder()
+                                        .name("DB_PASSWORD")
+                                        .valueFrom("arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:db")
+                                        .build())
+                                .repositoryCredentials(RepositoryCredentials.builder()
+                                        .credentialsParameter("arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:repo")
+                                        .build())
+                                .logConfiguration(LogConfiguration.builder()
+                                        .logDriver("awslogs")
+                                        .options(Map.of(
+                                                "awslogs-group", "/ecs/prod-api",
+                                                "splunk-token", "topsecret-token"
+                                        ))
+                                        .secretOptions(Secret.builder()
+                                                .name("splunk-token")
+                                                .valueFrom("arn:aws:secretsmanager:ap-northeast-2:123456789012:secret:splunk")
+                                                .build())
+                                        .build())
                                 .build())
                         .requiresCompatibilitiesWithStrings("FARGATE")
                         .build())
@@ -212,7 +234,13 @@ class EcsCollectorTest {
                 .contains("\"name\":\"SPRING_PROFILES_ACTIVE\"")
                 .contains("\"value\":\"prod\"")
                 .contains("\"name\":\"DB_PASSWORD\"")
-                .contains("\"value\":\"***REDACTED***\"");
+                .contains("\"value\":\"***REDACTED***\"")
+                .contains("\"logDriver\":\"awslogs\"")
+                .contains("\"awslogs-group\":\"/ecs/prod-api\"")
+                .contains("\"splunk-token\":\"***REDACTED***\"")
+                .doesNotContain("repositoryCredentials")
+                .doesNotContain("\"secrets\"")
+                .doesNotContain("arn:aws:secretsmanager");
 
         assertThat(result.relationships())
                 .extracting(relationship -> relationship.type(), relationship -> relationship.targetArn())

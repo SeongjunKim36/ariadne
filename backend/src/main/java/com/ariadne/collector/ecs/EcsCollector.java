@@ -318,7 +318,8 @@ public class EcsCollector extends BaseCollector {
     private String serializeContainers(List<ContainerDefinition> containerDefinitions) {
         var containers = new ArrayList<Map<String, Object>>();
         if (containerDefinitions != null) {
-            for (var containerDefinition : containerDefinitions) {
+            for (var rawContainerDefinition : containerDefinitions) {
+                var containerDefinition = redactionEngine.redactContainerDefinition(rawContainerDefinition);
                 var container = new LinkedHashMap<String, Object>();
                 putIfPresent(container, "name", containerDefinition.name());
                 putIfPresent(container, "image", containerDefinition.image());
@@ -348,6 +349,18 @@ public class EcsCollector extends BaseCollector {
                 }
                 if (!environment.isEmpty()) {
                     container.put("environment", List.copyOf(environment));
+                }
+
+                var logConfiguration = containerDefinition.logConfiguration();
+                if (logConfiguration != null) {
+                    var serialized = new LinkedHashMap<String, Object>();
+                    putIfPresent(serialized, "logDriver", logConfiguration.logDriverAsString());
+                    if (logConfiguration.options() != null && !logConfiguration.options().isEmpty()) {
+                        serialized.put("options", new LinkedHashMap<>(logConfiguration.options()));
+                    }
+                    if (!serialized.isEmpty()) {
+                        container.put("logConfiguration", Map.copyOf(serialized));
+                    }
                 }
 
                 containers.add(Map.copyOf(container));

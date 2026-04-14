@@ -1,7 +1,12 @@
 package com.ariadne.security;
 
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.ecs.model.ContainerDefinition;
+import software.amazon.awssdk.services.ecs.model.KeyValuePair;
+import software.amazon.awssdk.services.ecs.model.LogConfiguration;
+import software.amazon.awssdk.services.ecs.model.RepositoryCredentials;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +28,7 @@ public class RedactionEngine {
     private static final List<Pattern> VALUE_PATTERNS = List.of(
             Pattern.compile("(?i)^(sk-|pk-|ak-|rk-)\\w+"),
             Pattern.compile("(?i)^AKIA[0-9A-Z]{16}$"),
-            Pattern.compile("^[A-Za-z0-9+/]{40,}={0,2}$"),
+            Pattern.compile("^[A-Za-z0-9+/]{20,}={0,2}$"),
             Pattern.compile("(?i)^jdbc:[a-z0-9]+://.*password=[^&\\s;]+.*$")
     );
 
@@ -55,6 +60,50 @@ public class RedactionEngine {
             }
         }
         return redacted;
+    }
+
+    public List<KeyValuePair> redactEnvVars(List<KeyValuePair> envVars) {
+        var redacted = new ArrayList<KeyValuePair>();
+        if (envVars == null || envVars.isEmpty()) {
+            return redacted;
+        }
+        for (var envVar : envVars) {
+            redacted.add(KeyValuePair.builder()
+                    .name(envVar.name())
+                    .value(redactValue(envVar.name(), envVar.value()))
+                    .build());
+        }
+        return List.copyOf(redacted);
+    }
+
+    public ContainerDefinition redactContainerDefinition(ContainerDefinition definition) {
+        if (definition == null) {
+            return null;
+        }
+        return definition.toBuilder()
+                .environment(redactEnvVars(definition.environment()))
+                .secrets(List.of())
+                .repositoryCredentials((RepositoryCredentials) null)
+                .logConfiguration(redactLogConfiguration(definition.logConfiguration()))
+                .build();
+    }
+
+    public LogConfiguration redactLogConfiguration(LogConfiguration config) {
+        if (config == null) {
+            return null;
+        }
+
+        var safeOptions = new LinkedHashMap<String, String>();
+        if (config.options() != null && !config.options().isEmpty()) {
+            for (var entry : config.options().entrySet()) {
+                safeOptions.put(entry.getKey(), redactValue(entry.getKey(), entry.getValue()));
+            }
+        }
+
+        return config.toBuilder()
+                .options(safeOptions)
+                .secretOptions(List.of())
+                .build();
     }
 
     public String redactValue(String key, String value) {
