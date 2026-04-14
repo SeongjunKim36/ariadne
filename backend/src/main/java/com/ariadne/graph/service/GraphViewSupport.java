@@ -29,6 +29,7 @@ final class GraphViewSupport {
             case "VPC" -> "vpc-group";
             case "SUBNET", "DB_SUBNET_GROUP" -> "subnet-group";
             case "SECURITY_GROUP" -> "sg";
+            case "CIDR_SOURCE" -> "cidr";
             case "LOAD_BALANCER" -> "alb";
             case "ECS_CLUSTER" -> "ecs-cluster-group";
             case "ECS_SERVICE" -> "ecs-service";

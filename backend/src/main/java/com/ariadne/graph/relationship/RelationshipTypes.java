@@ -11,6 +11,10 @@ public final class RelationshipTypes {
     public static final String TRIGGERS = "TRIGGERS";
     public static final String HAS_RECORD = "HAS_RECORD";
     public static final String LIKELY_USES = "LIKELY_USES";
+    public static final String ALLOWS_FROM = "ALLOWS_FROM";
+    public static final String ALLOWS_TO = "ALLOWS_TO";
+    public static final String ALLOWS_SELF = "ALLOWS_SELF";
+    public static final String EGRESS_TO = "EGRESS_TO";
 
     private RelationshipTypes() {
     }

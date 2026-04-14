@@ -129,12 +129,14 @@ public class GraphQueryService {
     }
 
     private boolean matchesFilters(Map<String, Object> properties, Set<String> resourceTypes, String environment) {
+        var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
         var matchesEnvironment = environment == null
                 || environment.isBlank()
-                || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"));
+                || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"))
+                || "CIDR_SOURCE".equals(resourceType);
         var matchesType = resourceTypes == null
                 || resourceTypes.isEmpty()
-                || resourceTypes.contains(((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT));
+                || resourceTypes.contains(resourceType);
         return matchesEnvironment && matchesType;
     }
 
