@@ -53,7 +53,7 @@
 | 1-9 | SecurityGroupCollector 구현 | [x] | 2026-04-13 | VPC 소속 관계 포함 |
 | 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [x] | 2026-04-13 | LocalStack happy-path로 검증 |
 | 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [x] | 2026-04-13 | RDS 태그 수집 + HAS_SG/CONTAINS 포함, LocalStack happy-path는 Docker 환경 복구 후 재검증 |
-| 1-12 | 삭제된 리소스 stale 마킹 로직 | [ ] | | |
+| 1-12 | 삭제된 리소스 stale 마킹 로직 | [x] | 2026-04-14 | 성공한 수집기 타입 기준 stale 처리 + stale 노드 관계 정리 |
 | 1-13 | 수집기 단위 테스트 (모킹) | [x] | 2026-04-13 | SecurityGroupCollectorTest, Ec2CollectorTest |
 
 ### Week 3: ALB + 오케스트레이터 + API
@@ -61,26 +61,26 @@
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
 | 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [ ] | | |
-| 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [ ] | | |
+| 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [x] | 2026-04-14 | 병렬 수집 + warningMessage 노출 |
 | 1-16 | ScanRun JPA 엔티티 (PostgreSQL) | [x] | 2026-04-13 | ScanRun + Repository + Service 추가 |
 | 1-17 | POST /api/scan (202 Accepted + scanId) | [x] | 2026-04-13 | ScanController 구현 |
 | 1-18 | GET /api/scan/{scanId}/status | [x] | 2026-04-13 | ScanController 구현 |
 | 1-19 | GET /api/graph (React Flow 형식) | [x] | 2026-04-13 | GraphController + GraphQueryService 구현 |
-| 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [ ] | | |
+| 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [x] | 2026-04-14 | ResourceController + ResourceQueryService 추가 |
 | 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VPC/Subnet/SG/EC2 LocalStack 스캔 검증 |
 
 ### Week 4: 프론��엔드
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-22 | React Flow 기본 뷰 (TopologyCanvas) | [ ] | | |
-| 1-23 | 커스텀 노드: Ec2Node, RdsNode, VpcGroupNode, SubnetGroupNode, SgNode, AlbNode | [ ] | | |
-| 1-24 | dagre 레이아웃 적용 (compound graph) | [ ] | | |
-| 1-25 | FilterPanel (리소스 타입 + 환경 + VPC) | [ ] | | |
-| 1-26 | DetailPanel (노드 클릭 → 상세 정보) | [ ] | | |
-| 1-27 | 검색 기능 (이름/ID) | [ ] | | |
-| 1-28 | MiniMap | [ ] | | |
-| 1-29 | 노드 더블클릭 → 연결 하이라이트 (역참조) | [ ] | | |
+| 1-22 | React Flow 기본 뷰 (TopologyCanvas) | [x] | 2026-04-14 | `/api/graph` 연동된 실제 topology 화면 구현 |
+| 1-23 | 커스텀 노드: Ec2Node, RdsNode, VpcGroupNode, SubnetGroupNode, SgNode, AlbNode | [x] | 2026-04-14 | topologyNodes.tsx 추가 |
+| 1-24 | dagre 레이아웃 적용 (compound graph) | [x] | 2026-04-14 | 그룹 내부 leaf 배치에 dagre 적용 |
+| 1-25 | FilterPanel (리소스 타입 + 환경 + VPC) | [x] | 2026-04-14 | 필터 + 초기화 액션 포함 |
+| 1-26 | DetailPanel (노드 클릭 → 상세 정보) | [x] | 2026-04-14 | `/api/resources` 기반 연결 정보 표시 |
+| 1-27 | 검색 기능 (이름/ID) | [x] | 2026-04-14 | name/resourceId/tag 검색 |
+| 1-28 | MiniMap | [x] | 2026-04-14 | React Flow MiniMap 연동 |
+| 1-29 | 노드 더블클릭 → 연결 하이라이트 (역참조) | [x] | 2026-04-14 | focused resource 주변 관계 강조 |
 
 ### Week 5: 확장 수집기
 
@@ -104,7 +104,7 @@
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
 | 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 16/41 (39%)
+**Phase 1 진행률**: 27/41 (66%)
 
 ---
 

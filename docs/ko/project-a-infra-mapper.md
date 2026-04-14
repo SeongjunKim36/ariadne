@@ -1,6 +1,6 @@
 # Ariadne — AWS 인프라 맵퍼 기획서
 
-> 상태: Phase 1 진행 중 (VPC/Subnet/SG/EC2/RDS 수집 슬라이스 구현) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
+> 상태: Phase 1 진행 중 (핵심 수집기 + Topology UI/API 연결) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
 
 ## 이름의 유래
 
