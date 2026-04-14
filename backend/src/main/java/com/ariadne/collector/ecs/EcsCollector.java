@@ -9,6 +9,7 @@ import com.ariadne.graph.node.EcsService;
 import com.ariadne.graph.node.EcsTaskDefinition;
 import com.ariadne.graph.relationship.GraphRelationship;
 import com.ariadne.graph.relationship.RelationshipTypes;
+import com.ariadne.security.RedactionEngine;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
@@ -35,25 +36,22 @@ import java.util.Set;
 public class EcsCollector extends BaseCollector {
 
     private static final int ECS_DESCRIBE_BATCH_SIZE = 10;
-    private static final String REDACTED = "***REDACTED***";
-    private static final List<String> SENSITIVE_ENV_NAME_TOKENS = List.of(
-            "password",
-            "passwd",
-            "secret",
-            "token",
-            "key",
-            "credential",
-            "auth"
-    );
 
     private final EcsClient ecsClient;
     private final ElasticLoadBalancingV2Client elbClient;
     private final ObjectMapper objectMapper;
+    private final RedactionEngine redactionEngine;
 
-    public EcsCollector(EcsClient ecsClient, ElasticLoadBalancingV2Client elbClient, ObjectMapper objectMapper) {
+    public EcsCollector(
+            EcsClient ecsClient,
+            ElasticLoadBalancingV2Client elbClient,
+            ObjectMapper objectMapper,
+            RedactionEngine redactionEngine
+    ) {
         this.ecsClient = ecsClient;
         this.elbClient = elbClient;
         this.objectMapper = objectMapper;
+        this.redactionEngine = redactionEngine;
     }
 
     @Override
@@ -345,7 +343,7 @@ public class EcsCollector extends BaseCollector {
                 for (var pair : containerDefinition.environment()) {
                     var serialized = new LinkedHashMap<String, Object>();
                     putIfPresent(serialized, "name", pair.name());
-                    putIfPresent(serialized, "value", redactEnvironmentValue(pair.name(), pair.value()));
+                    putIfPresent(serialized, "value", redactionEngine.redactValue(pair.name(), pair.value()));
                     environment.add(Map.copyOf(serialized));
                 }
                 if (!environment.isEmpty()) {
@@ -361,22 +359,6 @@ public class EcsCollector extends BaseCollector {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to serialize ECS task definition containers", exception);
         }
-    }
-
-    private String redactEnvironmentValue(String key, String value) {
-        if (!hasText(value)) {
-            return value;
-        }
-        if (!hasText(key)) {
-            return value;
-        }
-        var normalizedKey = key.toLowerCase(Locale.ROOT);
-        for (var token : SENSITIVE_ENV_NAME_TOKENS) {
-            if (normalizedKey.contains(token)) {
-                return REDACTED;
-            }
-        }
-        return value;
     }
 
     private void putIfPresent(Map<String, Object> properties, String key, Object value) {
