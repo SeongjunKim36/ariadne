@@ -173,8 +173,4 @@ public class RdsCollector extends BaseCollector {
         }
         return endpoint.address() + ":" + endpoint.port();
     }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
 }

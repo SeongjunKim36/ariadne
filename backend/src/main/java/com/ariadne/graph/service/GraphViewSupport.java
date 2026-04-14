@@ -10,7 +10,8 @@ final class GraphViewSupport {
 
     private static final Set<String> PARENT_RELATIONSHIP_TYPES = Set.of(
             RelationshipTypes.BELONGS_TO,
-            RelationshipTypes.IN_SUBNET_GROUP
+            RelationshipTypes.IN_SUBNET_GROUP,
+            RelationshipTypes.RUNS_IN
     );
 
     private GraphViewSupport() {
@@ -28,6 +29,12 @@ final class GraphViewSupport {
             case "VPC" -> "vpc-group";
             case "SUBNET", "DB_SUBNET_GROUP" -> "subnet-group";
             case "SECURITY_GROUP" -> "sg";
+            case "LOAD_BALANCER" -> "alb";
+            case "ECS_CLUSTER" -> "ecs-cluster-group";
+            case "ECS_SERVICE" -> "ecs-service";
+            case "S3_BUCKET" -> "s3";
+            case "LAMBDA_FUNCTION" -> "lambda";
+            case "ROUTE53_ZONE" -> "route53";
             default -> resourceType.toLowerCase(Locale.ROOT);
         };
     }
@@ -35,7 +42,8 @@ final class GraphViewSupport {
     static boolean isGroupParent(String resourceType) {
         return "VPC".equals(resourceType)
                 || "SUBNET".equals(resourceType)
-                || "DB_SUBNET_GROUP".equals(resourceType);
+                || "DB_SUBNET_GROUP".equals(resourceType)
+                || "ECS_CLUSTER".equals(resourceType);
     }
 
     @SuppressWarnings("unchecked")

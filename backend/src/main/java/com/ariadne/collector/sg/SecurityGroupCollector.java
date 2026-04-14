@@ -60,8 +60,4 @@ public class SecurityGroupCollector extends BaseCollector {
 
         return new CollectResult(resources, relationships);
     }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
 }

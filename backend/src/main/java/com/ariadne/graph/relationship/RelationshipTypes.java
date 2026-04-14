@@ -6,6 +6,10 @@ public final class RelationshipTypes {
     public static final String HAS_SG = "HAS_SG";
     public static final String IN_SUBNET_GROUP = "IN_SUBNET_GROUP";
     public static final String CONTAINS = "CONTAINS";
+    public static final String ROUTES_TO = "ROUTES_TO";
+    public static final String RUNS_IN = "RUNS_IN";
+    public static final String TRIGGERS = "TRIGGERS";
+    public static final String HAS_RECORD = "HAS_RECORD";
 
     private RelationshipTypes() {
     }

@@ -88,8 +88,4 @@ public class Ec2Collector extends BaseCollector {
         }
         return "linux";
     }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
 }
