@@ -2,6 +2,7 @@ package com.ariadne.collector.ecs;
 
 import com.ariadne.collector.AwsCollectContext;
 import com.ariadne.graph.relationship.RelationshipTypes;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,12 +15,18 @@ import software.amazon.awssdk.services.ecs.model.DescribeClustersRequest;
 import software.amazon.awssdk.services.ecs.model.DescribeClustersResponse;
 import software.amazon.awssdk.services.ecs.model.DescribeServicesRequest;
 import software.amazon.awssdk.services.ecs.model.DescribeServicesResponse;
+import software.amazon.awssdk.services.ecs.model.DescribeTaskDefinitionRequest;
+import software.amazon.awssdk.services.ecs.model.DescribeTaskDefinitionResponse;
 import software.amazon.awssdk.services.ecs.model.ListServicesRequest;
 import software.amazon.awssdk.services.ecs.model.ListTagsForResourceRequest;
 import software.amazon.awssdk.services.ecs.model.ListTagsForResourceResponse;
 import software.amazon.awssdk.services.ecs.model.NetworkConfiguration;
+import software.amazon.awssdk.services.ecs.model.PortMapping;
 import software.amazon.awssdk.services.ecs.model.Service;
 import software.amazon.awssdk.services.ecs.model.Tag;
+import software.amazon.awssdk.services.ecs.model.TaskDefinition;
+import software.amazon.awssdk.services.ecs.model.ContainerDefinition;
+import software.amazon.awssdk.services.ecs.model.KeyValuePair;
 import software.amazon.awssdk.services.ecs.paginators.ListClustersIterable;
 import software.amazon.awssdk.services.ecs.paginators.ListServicesIterable;
 import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
@@ -62,6 +69,7 @@ class EcsCollectorTest {
     void collectsEcsClusterServiceAndRelationships() {
         var clusterArn = "arn:aws:ecs:ap-northeast-2:123456789012:cluster/prod-cluster";
         var serviceArn = "arn:aws:ecs:ap-northeast-2:123456789012:service/prod-cluster/prod-api";
+        var taskDefinitionArn = "arn:aws:ecs:ap-northeast-2:123456789012:task-definition/prod-api:5";
         var loadBalancerArn = "arn:aws:elasticloadbalancing:ap-northeast-2:123456789012:loadbalancer/app/prod-api/abcdef";
         var targetGroupArn = "arn:aws:elasticloadbalancing:ap-northeast-2:123456789012:targetgroup/prod-api/123456";
 
@@ -107,6 +115,37 @@ class EcsCollectorTest {
                                 .build())
                         .build())
                 .build());
+        when(ecsClient.describeTaskDefinition(any(DescribeTaskDefinitionRequest.class))).thenReturn(DescribeTaskDefinitionResponse.builder()
+                .taskDefinition(TaskDefinition.builder()
+                        .taskDefinitionArn(taskDefinitionArn)
+                        .family("prod-api")
+                        .revision(5)
+                        .cpu("512")
+                        .memory("1024")
+                        .networkMode("awsvpc")
+                        .taskRoleArn("arn:aws:iam::123456789012:role/prod-task")
+                        .executionRoleArn("arn:aws:iam::123456789012:role/prod-exec")
+                        .containerDefinitions(ContainerDefinition.builder()
+                                .name("web")
+                                .image("123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/prod-api:v5")
+                                .cpu(256)
+                                .memory(512)
+                                .portMappings(PortMapping.builder()
+                                        .containerPort(8080)
+                                        .protocol("tcp")
+                                        .build())
+                                .environment(
+                                        KeyValuePair.builder().name("SPRING_PROFILES_ACTIVE").value("prod").build(),
+                                        KeyValuePair.builder().name("DB_PASSWORD").value("super-secret").build()
+                                )
+                                .build())
+                        .requiresCompatibilitiesWithStrings("FARGATE")
+                        .build())
+                .tags(
+                        Tag.builder().key("Name").value("prod-api").build(),
+                        Tag.builder().key("environment").value("prod").build()
+                )
+                .build());
         when(ecsClient.listTagsForResource(any(ListTagsForResourceRequest.class))).thenAnswer(invocation -> {
             var request = invocation.getArgument(0, ListTagsForResourceRequest.class);
             if (clusterArn.equals(request.resourceArn())) {
@@ -125,16 +164,17 @@ class EcsCollectorTest {
                     .build();
         });
 
-        var result = new EcsCollector(ecsClient, elbClient).collect(CONTEXT);
+        var result = new EcsCollector(ecsClient, elbClient, new ObjectMapper()).collect(CONTEXT);
 
-        assertThat(result.resources()).hasSize(2);
-        assertThat(result.relationships()).hasSize(3);
+        assertThat(result.resources()).hasSize(3);
+        assertThat(result.relationships()).hasSize(4);
 
         assertThat(result.resources())
                 .extracting(resource -> resource.getResourceType(), resource -> resource.getName())
                 .containsExactlyInAnyOrder(
                         tuple("ECS_CLUSTER", "prod-cluster"),
-                        tuple("ECS_SERVICE", "prod-api")
+                        tuple("ECS_SERVICE", "prod-api"),
+                        tuple("ECS_TASK_DEFINITION", "prod-api")
                 );
 
         var clusterProperties = result.resources().stream()
@@ -158,10 +198,24 @@ class EcsCollectorTest {
                 .containsEntry("launchType", "FARGATE")
                 .containsEntry("taskDefinition", "prod-api:5");
 
+        var taskDefinitionProperties = result.resources().stream()
+                .filter(resource -> "ECS_TASK_DEFINITION".equals(resource.getResourceType()))
+                .findFirst()
+                .orElseThrow()
+                .toProperties();
+        assertThat(taskDefinitionProperties)
+                .containsEntry("family", "prod-api")
+                .containsEntry("revision", 5)
+                .containsEntry("containerCount", 1);
+        assertThat(String.valueOf(taskDefinitionProperties.get("containers")))
+                .contains("\"SPRING_PROFILES_ACTIVE\",\"value\":\"prod\"")
+                .contains("\"DB_PASSWORD\",\"value\":\"***REDACTED***\"");
+
         assertThat(result.relationships())
                 .extracting(relationship -> relationship.type(), relationship -> relationship.targetArn())
                 .containsExactlyInAnyOrder(
                         tuple(RelationshipTypes.RUNS_IN, clusterArn),
+                        tuple(RelationshipTypes.USES_TASK_DEF, taskDefinitionArn),
                         tuple(RelationshipTypes.HAS_SG, "arn:aws:ec2:ap-northeast-2:123456789012:security-group/sg-1234"),
                         tuple(RelationshipTypes.ROUTES_TO, serviceArn)
                 );

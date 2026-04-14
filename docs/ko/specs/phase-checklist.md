@@ -119,7 +119,7 @@
 | 2-3 | Managed Prefix List 처리 | [x] | 2026-04-14 | `describeManagedPrefixLists` + `getManagedPrefixListEntries`로 prefix list CIDR 확장 |
 | 2-4 | Self-reference SG 처리 → ALLOWS_SELF | [x] | 2026-04-14 | 인바운드/아웃바운드 self rule을 `ALLOWS_SELF`로 저장 |
 | 2-5 | CidrSource 가상 노드 생성 (0.0.0.0/0 → riskLevel:HIGH) | [x] | 2026-04-14 | `CIDR_SOURCE` 노드 + `Public Internet`/`riskLevel` 매핑 |
-| 2-6 | EcsTaskDefinition 수집기 + USES_TASK_DEF 관계 | [ ] | | |
+| 2-6 | EcsTaskDefinition 수집기 + USES_TASK_DEF 관계 | [x] | 2026-04-14 | task definition 상세 수집 + 환경변수 기본 리댁션 + DetailPanel 연결 표시 |
 | 2-7 | 리댁션 엔진 기본 구현 (키 패턴 + 값 패턴) | [ ] | | |
 | 2-8 | 리댁션 확장: secrets, repositoryCredentials, logConfiguration | [ ] | | |
 | 2-9 | React Flow: CidrSourceNode + SG 규칙 엣지 시각화 | [x] | 2026-04-14 | `cidr` 노드 타입, rule edge 스타일, VPC 필터 연결 컨텍스트 반영 |
@@ -155,7 +155,7 @@
 | 2-24 | SG 시각화 UX 개선 | [ ] | | |
 | 2-25 | 리댁션 엔진 엣지 케이스 처리 | [ ] | | |
 
-**Phase 2 진행률**: 6/25 (24%)
+**Phase 2 진행률**: 7/25 (28%)
 
 ---
 
