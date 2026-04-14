@@ -42,6 +42,8 @@ function resolveIcon(kind: string): LucideIcon {
       return Database;
     case 'sg':
       return Shield;
+    case 'iam-role':
+      return Shield;
     case 'alb':
       return Network;
     case 'ecs-cluster-group':
@@ -119,6 +121,7 @@ export const topologyNodeTypes = {
   ec2: ResourceNodeCard,
   rds: ResourceNodeCard,
   sg: ResourceNodeCard,
+  'iam-role': ResourceNodeCard,
   alb: ResourceNodeCard,
   'ecs-service': ResourceNodeCard,
   s3: ResourceNodeCard,
