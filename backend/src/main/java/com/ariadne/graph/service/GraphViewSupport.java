@@ -8,6 +8,10 @@ import java.util.Set;
 
 final class GraphViewSupport {
 
+    private static final Set<String> DETAIL_ONLY_RESOURCE_TYPES = Set.of(
+            "ECS_TASK_DEFINITION"
+    );
+
     private static final Set<String> PARENT_RELATIONSHIP_TYPES = Set.of(
             RelationshipTypes.BELONGS_TO,
             RelationshipTypes.IN_SUBNET_GROUP,
@@ -19,6 +23,10 @@ final class GraphViewSupport {
 
     static boolean isParentRelationship(String relationshipType) {
         return PARENT_RELATIONSHIP_TYPES.contains(relationshipType);
+    }
+
+    static boolean isDetailOnlyResourceType(String resourceType) {
+        return resourceType != null && DETAIL_ONLY_RESOURCE_TYPES.contains(resourceType.toUpperCase(Locale.ROOT));
     }
 
     static String toFrontendType(String resourceType) {
@@ -33,6 +41,7 @@ final class GraphViewSupport {
             case "LOAD_BALANCER" -> "alb";
             case "ECS_CLUSTER" -> "ecs-cluster-group";
             case "ECS_SERVICE" -> "ecs-service";
+            case "ECS_TASK_DEFINITION" -> "ecs-task-def";
             case "S3_BUCKET" -> "s3";
             case "LAMBDA_FUNCTION" -> "lambda";
             case "ROUTE53_ZONE" -> "route53";

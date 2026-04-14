@@ -6,6 +6,7 @@ import com.ariadne.graph.node.DbSubnetGroup;
 import com.ariadne.graph.node.Ec2Instance;
 import com.ariadne.graph.node.EcsCluster;
 import com.ariadne.graph.node.EcsService;
+import com.ariadne.graph.node.EcsTaskDefinition;
 import com.ariadne.graph.node.LambdaFunction;
 import com.ariadne.graph.node.LoadBalancer;
 import com.ariadne.graph.node.RdsInstance;
@@ -117,7 +118,7 @@ class Phase1QuestionValidationIntegrationTest {
 
         assertThat(names)
                 .contains("prod-main-vpc", "prod-app-a", "prod-db-a", "shared-db-sg", "prod-api-1", "prod-cluster", "prod-api", "prod-db-1", "prod-web");
-        assertThat(names).doesNotContain("staging-api-1");
+        assertThat(names).doesNotContain("staging-api-1", "prod-api:7");
         assertThat(prodGraph.edges())
                 .extracting(edge -> edge.type(), edge -> edge.source(), edge -> edge.target())
                 .contains(
@@ -134,6 +135,13 @@ class Phase1QuestionValidationIntegrationTest {
                         org.assertj.core.groups.Tuple.tuple("prod-api-1", "incoming", "medium"),
                         org.assertj.core.groups.Tuple.tuple("prod-api", "incoming", "medium")
                 );
+
+        ResourceDetailResponse serviceDetail = resourceQueryService.findByResourceId("prod-api");
+
+        assertThat(serviceDetail.connections())
+                .filteredOn(connection -> RelationshipTypes.USES_TASK_DEF.equals(connection.relationshipType()))
+                .extracting(connection -> String.valueOf(connection.node().data().get("resourceId")), connection -> connection.node().type())
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("prod-api:7", "ecs-task-def"));
     }
 
     private CollectResult seedGraph() {
@@ -238,6 +246,26 @@ class Phase1QuestionValidationIntegrationTest {
                         0,
                         "FARGATE",
                         "prod-api:7"
+                ),
+                new EcsTaskDefinition(
+                        arn("ecs", "task-definition/prod-api:7"),
+                        "prod-api:7",
+                        "prod-api:7",
+                        "ap-northeast-2",
+                        "123456789012",
+                        "prod",
+                        COLLECTED_AT,
+                        Map.of("environment", "prod"),
+                        "prod-api",
+                        7,
+                        "512",
+                        "1024",
+                        "awsvpc",
+                        "arn:aws:iam::123456789012:role/prod-task",
+                        "arn:aws:iam::123456789012:role/prod-exec",
+                        "FARGATE",
+                        1,
+                        "[{\"name\":\"web\",\"image\":\"123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/prod-api:v7\"}]"
                 ),
                 new DbSubnetGroup(
                         arn("rds", "subgrp:prod-db-subnets"),
@@ -365,6 +393,7 @@ class Phase1QuestionValidationIntegrationTest {
                 new GraphRelationship(arn("ecs", "service/prod-cluster/prod-api"), arn("ec2", "security-group/sg-db-shared"), RelationshipTypes.HAS_SG, Map.of()),
                 new GraphRelationship(arn("rds", "db:prod-db-1"), arn("ec2", "security-group/sg-db-shared"), RelationshipTypes.HAS_SG, Map.of()),
                 new GraphRelationship(arn("ecs", "service/prod-cluster/prod-api"), arn("ecs", "cluster/prod-cluster"), RelationshipTypes.RUNS_IN, Map.of()),
+                new GraphRelationship(arn("ecs", "service/prod-cluster/prod-api"), arn("ecs", "task-definition/prod-api:7"), RelationshipTypes.USES_TASK_DEF, Map.of()),
                 GraphRelationship.belongsTo(arn("elasticloadbalancing", "loadbalancer/app/prod-web/123456"), arn("ec2", "vpc/vpc-1234")),
                 new GraphRelationship(arn("elasticloadbalancing", "loadbalancer/app/prod-web/123456"), arn("ec2", "security-group/sg-db-shared"), RelationshipTypes.HAS_SG, Map.of()),
                 new GraphRelationship(arn("elasticloadbalancing", "loadbalancer/app/prod-web/123456"), arn("ec2", "instance/i-prod-api-1"), RelationshipTypes.ROUTES_TO, Map.of("port", 80, "protocol", "HTTP")),

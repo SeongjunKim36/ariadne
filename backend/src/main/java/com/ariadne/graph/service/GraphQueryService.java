@@ -130,6 +130,9 @@ public class GraphQueryService {
 
     private boolean matchesFilters(Map<String, Object> properties, Set<String> resourceTypes, String environment) {
         var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
+        if (GraphViewSupport.isDetailOnlyResourceType(resourceType)) {
+            return false;
+        }
         var matchesEnvironment = environment == null
                 || environment.isBlank()
                 || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"))
