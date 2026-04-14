@@ -26,7 +26,7 @@
         "elasticloadbalancing:DescribeTags",
         "s3:ListAllMyBuckets",
         "s3:GetBucketLocation",
-        "s3:GetBucketEncryption",
+        "s3:GetEncryptionConfiguration",
         "s3:GetBucketVersioning",
         "s3:GetBucketPublicAccessBlock",
         "s3:GetBucketNotification",

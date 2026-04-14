@@ -97,14 +97,14 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-36 | dongne-v2 실계정 연동 테스트 | [ ] | | 로컬 AWS SSO 세션 만료로 재로그인 필요 |
+| 1-36 | dongne-v2 실계정 연동 테스트 | [x] | 2026-04-14 | `Ariadne_ReadOnly` IAM 사용자로 실계정 스캔 성공 (22 nodes / 21 edges, 환경 태그 부재로 `unknown`) |
 | 1-37 | 전체 수집 → React Flow 시각화 E2E 확인 | [x] | 2026-04-14 | Playwright로 scan trigger → 상태 전이 → topology/detail 흐름 검증 |
 | 1-38 | LIKELY_USES 추론 관계 생성 (같은 SG + DB 포트) | [x] | 2026-04-14 | GraphInferenceService 추가 + 스캔 후 추론 관계 재생성 |
 | 1-39 | "prod 환경에 뭐가 돌아가고 있어?" 답변 가능 확인 | [x] | 2026-04-14 | GraphQueryService 통합 테스트로 prod VPC 토폴로지 검증 |
 | 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [x] | 2026-04-14 | ResourceQueryService 통합 테스트로 LIKELY_USES 역참조 검증 |
 | 1-41 | 버그 수정 + UI 다듬기 | [x] | 2026-04-14 | scan preflight API, 친절한 AWS 오류 메시지, scan status banner 추가 |
 
-**Phase 1 진행률**: 39/41 (95%)
+**Phase 1 진행률**: 40/41 (98%)
 
 ---
 
