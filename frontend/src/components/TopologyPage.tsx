@@ -55,16 +55,39 @@ function collectAncestorIds(nodeId: string, nodesById: Map<string, GraphNodeReco
   return ancestors;
 }
 
-function belongsToVpc(node: GraphNodeRecord, selectedVpc: string, nodesById: Map<string, GraphNodeRecord>) {
+function belongsToVpc(
+  node: GraphNodeRecord,
+  selectedVpc: string,
+  nodesById: Map<string, GraphNodeRecord>,
+  neighborsById: Map<string, Set<string>>,
+) {
   if (!selectedVpc) {
     return true;
   }
-  let current: GraphNodeRecord | undefined = node;
-  while (current) {
+  const queue: string[] = [node.id];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    if (!currentId || visited.has(currentId)) {
+      continue;
+    }
+    visited.add(currentId);
+    const current = nodesById.get(currentId);
+    if (!current) {
+      continue;
+    }
     if (current.type === 'vpc-group' && value(current.data, 'resourceId') === selectedVpc) {
       return true;
     }
-    current = current.parentNode ? nodesById.get(current.parentNode) : undefined;
+    if (current.parentNode && !visited.has(current.parentNode)) {
+      queue.push(current.parentNode);
+    }
+    for (const neighborId of neighborsById.get(currentId) ?? new Set<string>()) {
+      if (!visited.has(neighborId)) {
+        queue.push(neighborId);
+      }
+    }
   }
   return false;
 }
@@ -253,6 +276,16 @@ export function TopologyPage() {
   }, [polledScan, mutateLatestScan, mutate]);
 
   const nodesById = new Map((graph?.nodes ?? []).map((node) => [node.id, node]));
+  const neighborsById = new Map<string, Set<string>>();
+  for (const edge of graph?.edges ?? []) {
+    const sourceNeighbors = neighborsById.get(edge.source) ?? new Set<string>();
+    sourceNeighbors.add(edge.target);
+    neighborsById.set(edge.source, sourceNeighbors);
+
+    const targetNeighbors = neighborsById.get(edge.target) ?? new Set<string>();
+    targetNeighbors.add(edge.source);
+    neighborsById.set(edge.target, targetNeighbors);
+  }
   const allTypes = Array.from(new Set((graph?.nodes ?? []).map((node) => node.type))).sort();
   const environmentOptions = Array.from(new Set(
     (graph?.nodes ?? [])
@@ -269,7 +302,7 @@ export function TopologyPage() {
   const matchedNodes = (graph?.nodes ?? []).filter((node) => {
     const typeMatch = activeTypes.length === 0 || activeTypes.includes(node.type);
     const envMatch = !environment || value(node.data, 'environment') === environment;
-    const vpcMatch = belongsToVpc(node, selectedVpc, nodesById);
+    const vpcMatch = belongsToVpc(node, selectedVpc, nodesById, neighborsById);
     const searchMatch = matchesSearch(node, deferredSearch);
     return typeMatch && envMatch && vpcMatch && searchMatch;
   });
@@ -279,6 +312,19 @@ export function TopologyPage() {
     visibleIds.add(node.id);
     for (const ancestorId of collectAncestorIds(node.id, nodesById)) {
       visibleIds.add(ancestorId);
+    }
+  }
+  const cidrAllowed = activeTypes.length === 0 || activeTypes.includes('cidr');
+  if (cidrAllowed) {
+    for (const edge of graph?.edges ?? []) {
+      const sourceNode = nodesById.get(edge.source);
+      const targetNode = nodesById.get(edge.target);
+      if (sourceNode?.type === 'cidr' && visibleIds.has(edge.target)) {
+        visibleIds.add(edge.source);
+      }
+      if (targetNode?.type === 'cidr' && visibleIds.has(edge.source)) {
+        visibleIds.add(edge.target);
+      }
     }
   }
   if (activeTypes.length === 0 && !environment && !selectedVpc && !deferredSearch) {
@@ -556,6 +602,9 @@ export function TopologyPage() {
                       }
                       if (node.type === 'sg') {
                         return '#fb7185';
+                      }
+                      if (node.type === 'cidr') {
+                        return '#f59e0b';
                       }
                       if (node.type === 'rds') {
                         return '#60a5fa';

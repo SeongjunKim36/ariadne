@@ -32,6 +32,7 @@ public class GraphPersistenceService {
                 "CREATE INDEX idx_environment IF NOT EXISTS FOR (n:AwsResource) ON (n.environment)",
                 "CREATE INDEX idx_vpc_id IF NOT EXISTS FOR (n:Vpc) ON (n.resourceId)",
                 "CREATE INDEX idx_sg_group_id IF NOT EXISTS FOR (n:SecurityGroup) ON (n.groupId)",
+                "CREATE INDEX idx_cidr_source_cidr IF NOT EXISTS FOR (n:CidrSource) ON (n.cidr)",
                 "CREATE INDEX idx_lb_dns_name IF NOT EXISTS FOR (n:LoadBalancer) ON (n.dnsName)",
                 "CREATE INDEX idx_route53_zone_id IF NOT EXISTS FOR (n:Route53Zone) ON (n.hostedZoneId)"
         )) {

@@ -17,6 +17,8 @@ function isGroupNode(node: GraphNodeRecord) {
 
 function nodeSize(node: GraphNodeRecord) {
   switch (node.type) {
+    case 'cidr':
+      return { width: 208, height: 92 };
     case 'sg':
       return { width: 220, height: 96 };
     case 'rds':
@@ -40,6 +42,8 @@ function nodeSize(node: GraphNodeRecord) {
 
 function accentForType(type: string): TopologyNodeData['accent'] {
   switch (type) {
+    case 'cidr':
+      return 'slate';
     case 'ec2':
       return 'amber';
     case 'rds':
@@ -74,6 +78,12 @@ function value(record: Record<string, unknown>, key: string) {
 function describeNode(node: GraphNodeRecord) {
   const { data } = node;
   switch (node.type) {
+    case 'cidr':
+      return {
+        subtitle: value(data, 'cidr') || value(data, 'resourceId'),
+        detail: [value(data, 'label'), value(data, 'riskLevel')].filter(Boolean).join(' · '),
+        status: value(data, 'addressFamily') || (value(data, 'isPublic') === 'true' ? 'public' : ''),
+      };
     case 'ec2':
       return {
         subtitle: [value(data, 'resourceId'), value(data, 'instanceType')].filter(Boolean).join(' · '),
@@ -171,6 +181,36 @@ function edgeVisual(type: string, selected: boolean, highlighted: boolean) {
   const opacity = highlighted ? 0.92 : 0.18;
 
   switch (type) {
+    case 'ALLOWS_FROM':
+      return {
+        animated: false,
+        stroke: selected ? '#d97706' : '#f59e0b',
+        strokeWidth: selected ? 2.4 : 1.8,
+        opacity,
+      };
+    case 'ALLOWS_TO':
+      return {
+        animated: false,
+        stroke: selected ? '#b45309' : '#f59e0b',
+        strokeWidth: selected ? 2.2 : 1.5,
+        opacity,
+      };
+    case 'ALLOWS_SELF':
+      return {
+        animated: selected,
+        stroke: selected ? '#b45309' : '#f59e0b',
+        strokeDasharray: '3 3',
+        strokeWidth: selected ? 2.3 : 1.6,
+        opacity,
+      };
+    case 'EGRESS_TO':
+      return {
+        animated: false,
+        stroke: selected ? '#475569' : '#64748b',
+        strokeDasharray: '5 4',
+        strokeWidth: selected ? 2.1 : 1.4,
+        opacity,
+      };
     case 'LIKELY_USES':
       return {
         animated: true,
@@ -439,7 +479,11 @@ export function buildTopologyElements(
         opacity: visual.opacity,
       },
       labelStyle: {
-        fill: edge.type === 'LIKELY_USES' ? '#2563eb' : '#64748b',
+        fill: edge.type === 'LIKELY_USES'
+          ? '#2563eb'
+          : edge.type.startsWith('ALLOWS') || edge.type === 'EGRESS_TO'
+            ? '#92400e'
+            : '#64748b',
         fontSize: 10,
         fontWeight: 700,
       },
