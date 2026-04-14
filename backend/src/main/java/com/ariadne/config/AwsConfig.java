@@ -11,6 +11,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ecs.EcsClient;
 import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
+import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.rds.RdsClient;
 import software.amazon.awssdk.services.route53.Route53Client;
@@ -77,6 +78,19 @@ public class AwsConfig {
     @Bean
     Route53Client route53Client(AwsCredentialsProvider credentialsProvider) {
         return buildClient(Route53Client.builder(), credentialsProvider).build();
+    }
+
+    @Bean
+    IamClient iamClient(AwsCredentialsProvider credentialsProvider) {
+        var builder = IamClient.builder()
+                .credentialsProvider(credentialsProvider);
+        if (awsProperties.hasEndpointOverride()) {
+            builder.region(awsProperties.awsRegion())
+                    .endpointOverride(awsProperties.endpointUri());
+        } else {
+            builder.region(Region.AWS_GLOBAL);
+        }
+        return builder.build();
     }
 
     @Bean
