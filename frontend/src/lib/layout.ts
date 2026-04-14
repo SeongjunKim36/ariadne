@@ -166,6 +166,52 @@ function sortNodes(nodes: GraphNodeRecord[]) {
   });
 }
 
+function edgeVisual(type: string, selected: boolean, highlighted: boolean) {
+  const emphasis = selected ? 2.6 : highlighted ? 1.7 : 1.1;
+  const opacity = highlighted ? 0.92 : 0.18;
+
+  switch (type) {
+    case 'LIKELY_USES':
+      return {
+        animated: true,
+        stroke: selected ? '#1d4ed8' : '#3b82f6',
+        strokeDasharray: '7 5',
+        strokeWidth: selected ? 2.9 : 2.1,
+        opacity,
+      };
+    case 'ROUTES_TO':
+      return {
+        animated: selected,
+        stroke: selected ? '#c2410c' : '#f97316',
+        strokeWidth: emphasis,
+        opacity,
+      };
+    case 'TRIGGERS':
+      return {
+        animated: selected,
+        stroke: selected ? '#047857' : '#10b981',
+        strokeDasharray: '4 4',
+        strokeWidth: emphasis,
+        opacity,
+      };
+    case 'HAS_RECORD':
+      return {
+        animated: false,
+        stroke: selected ? '#7c3aed' : '#8b5cf6',
+        strokeDasharray: '3 4',
+        strokeWidth: emphasis,
+        opacity,
+      };
+    default:
+      return {
+        animated: selected,
+        stroke: selected ? '#f97316' : '#6b7280',
+        strokeWidth: emphasis,
+        opacity,
+      };
+  }
+}
+
 function buildLeafLayout(
   leafNodes: GraphNodeRecord[],
   edges: GraphEdgeRecord[],
@@ -376,22 +422,24 @@ export function buildTopologyElements(
     const highlighted = emphasizedIds.size === 0
       || (emphasizedIds.has(edge.source) && emphasizedIds.has(edge.target));
     const selected = selectedArn === edge.source || selectedArn === edge.target;
+    const visual = edgeVisual(edge.type, selected, highlighted);
 
     return {
       id: edge.id,
       source: edge.source,
       target: edge.target,
       type: 'smoothstep',
-      animated: selected,
+      animated: visual.animated,
       data: edge.data,
       label: edge.type,
       style: {
-        stroke: selected ? '#f97316' : '#6b7280',
-        strokeWidth: selected ? 2.4 : highlighted ? 1.6 : 1.1,
-        opacity: highlighted ? 0.9 : 0.18,
+        stroke: visual.stroke,
+        strokeWidth: visual.strokeWidth,
+        strokeDasharray: visual.strokeDasharray,
+        opacity: visual.opacity,
       },
       labelStyle: {
-        fill: '#64748b',
+        fill: edge.type === 'LIKELY_USES' ? '#2563eb' : '#64748b',
         fontSize: 10,
         fontWeight: 700,
       },
