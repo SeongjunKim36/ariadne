@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,6 +29,7 @@ public class GraphQueryService {
     public GraphResponse fetchGraph(String environment, Set<String> resourceTypes, String vpcId) {
         var nodeRows = neo4jClient.query("""
                         MATCH (n:AwsResource)
+                        WHERE coalesce(n.stale, false) = false
                         RETURN properties(n) AS properties, labels(n) AS labels
                         ORDER BY n.name, n.resourceId
                         """)
@@ -38,6 +38,8 @@ public class GraphQueryService {
 
         var edgeRows = neo4jClient.query("""
                         MATCH (source:AwsResource)-[r]->(target:AwsResource)
+                        WHERE coalesce(source.stale, false) = false
+                          AND coalesce(target.stale, false) = false
                         RETURN source.arn AS sourceArn,
                                target.arn AS targetArn,
                                type(r) AS relationshipType,
@@ -52,7 +54,7 @@ public class GraphQueryService {
 
         for (var edgeRow : edgeRows) {
             var relationshipType = (String) edgeRow.get("relationshipType");
-            if ("BELONGS_TO".equals(relationshipType) || "IN_SUBNET_GROUP".equals(relationshipType)) {
+            if (GraphViewSupport.isParentRelationship(relationshipType)) {
                 parentByChild.put((String) edgeRow.get("sourceArn"), (String) edgeRow.get("targetArn"));
             }
         }
@@ -61,7 +63,7 @@ public class GraphQueryService {
             @SuppressWarnings("unchecked")
             var properties = new LinkedHashMap<>((Map<String, Object>) nodeRow.get("properties"));
             var arn = (String) properties.get("arn");
-            var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(Locale.ROOT);
+            var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
             resourceTypeByArn.put(arn, resourceType);
             if (matchesFilters(properties, resourceTypes, environment)
                     && belongsToVpc(properties, parentByChild, nodesByArn, nodeRows, vpcId)) {
@@ -77,9 +79,9 @@ public class GraphQueryService {
             var parentResourceType = resourceTypeByArn.get(parentArn);
             nodes.add(new GraphResponse.GraphNode(
                     arn,
-                    toFrontendType((String) properties.get("resourceType")),
+                    GraphViewSupport.toFrontendType((String) properties.get("resourceType")),
                     properties,
-                    isGroupParent(parentResourceType) ? parentArn : null
+                    GraphViewSupport.isGroupParent(parentResourceType) ? parentArn : null
             ));
         }
 
@@ -120,7 +122,7 @@ public class GraphQueryService {
                 || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"));
         var matchesType = resourceTypes == null
                 || resourceTypes.isEmpty()
-                || resourceTypes.contains(((String) properties.getOrDefault("resourceType", "")).toUpperCase(Locale.ROOT));
+                || resourceTypes.contains(((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT));
         return matchesEnvironment && matchesType;
     }
 
@@ -185,24 +187,5 @@ public class GraphQueryService {
             }
         }
         return null;
-    }
-
-    private String toFrontendType(String resourceType) {
-        if (resourceType == null) {
-            return "unknown";
-        }
-        return switch (resourceType.toUpperCase(Locale.ROOT)) {
-            case "VPC" -> "vpc-group";
-            case "SUBNET" -> "subnet-group";
-            case "DB_SUBNET_GROUP" -> "subnet-group";
-            case "SECURITY_GROUP" -> "sg";
-            default -> resourceType.toLowerCase(Locale.ROOT);
-        };
-    }
-
-    private boolean isGroupParent(String resourceType) {
-        return "VPC".equals(resourceType)
-                || "SUBNET".equals(resourceType)
-                || "DB_SUBNET_GROUP".equals(resourceType);
     }
 }

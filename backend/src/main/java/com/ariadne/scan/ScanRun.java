@@ -38,6 +38,9 @@ public class ScanRun {
     @Column(length = 2048)
     private String errorMessage;
 
+    @Column(length = 2048)
+    private String warningMessage;
+
     protected ScanRun() {
     }
 
@@ -79,13 +82,24 @@ public class ScanRun {
         return errorMessage;
     }
 
-    public void markCompleted(OffsetDateTime completedAt, int totalNodes, int totalEdges, long durationMs) {
+    public String getWarningMessage() {
+        return warningMessage;
+    }
+
+    public void markCompleted(
+            OffsetDateTime completedAt,
+            int totalNodes,
+            int totalEdges,
+            long durationMs,
+            String warningMessage
+    ) {
         this.status = ScanStatus.COMPLETED;
         this.completedAt = completedAt;
         this.totalNodes = totalNodes;
         this.totalEdges = totalEdges;
         this.durationMs = durationMs;
         this.errorMessage = null;
+        this.warningMessage = warningMessage;
     }
 
     public void markFailed(OffsetDateTime completedAt, long durationMs, String errorMessage) {
@@ -93,5 +107,6 @@ public class ScanRun {
         this.completedAt = completedAt;
         this.durationMs = durationMs;
         this.errorMessage = errorMessage;
+        this.warningMessage = null;
     }
 }

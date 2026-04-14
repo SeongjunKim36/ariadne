@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.rds.model.ListTagsForResourceRequest;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class RdsCollector extends BaseCollector {
@@ -28,6 +29,11 @@ public class RdsCollector extends BaseCollector {
     @Override
     public String resourceType() {
         return "RDS";
+    }
+
+    @Override
+    public Set<String> managedResourceTypes() {
+        return Set.of("RDS", "DB_SUBNET_GROUP");
     }
 
     @Override

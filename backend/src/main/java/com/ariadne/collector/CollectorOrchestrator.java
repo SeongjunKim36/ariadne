@@ -2,16 +2,23 @@ package com.ariadne.collector;
 
 import com.ariadne.config.AwsProperties;
 import com.ariadne.graph.service.GraphPersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.sts.StsClient;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CollectorOrchestrator {
+
+    private static final Logger log = LoggerFactory.getLogger(CollectorOrchestrator.class);
 
     private final List<ResourceCollector> collectors;
     private final GraphPersistenceService graphPersistenceService;
@@ -35,16 +42,29 @@ public class CollectorOrchestrator {
     public ScanSummary collectAll() {
         var context = buildContext();
         var aggregate = CollectResult.empty();
-        for (var collector : collectors) {
-            aggregate = aggregate.merge(collector.collect(context));
+        var warnings = new ArrayList<String>();
+        var managedResourceTypes = new LinkedHashSet<String>();
+
+        var outcomes = collectors.parallelStream()
+                .map(collector -> collectSafely(collector, context))
+                .toList();
+
+        for (var outcome : outcomes) {
+            if (outcome.warning() != null) {
+                warnings.add(outcome.warning());
+                continue;
+            }
+            managedResourceTypes.addAll(outcome.managedResourceTypes());
+            aggregate = aggregate.merge(outcome.result());
         }
 
-        graphPersistenceService.save(aggregate);
+        graphPersistenceService.save(aggregate, context.collectedAt(), managedResourceTypes);
 
         return new ScanSummary(
                 aggregate.resources().size(),
                 aggregate.relationships().size(),
-                context.collectedAt()
+                context.collectedAt(),
+                warnings
         );
     }
 
@@ -60,7 +80,29 @@ public class CollectorOrchestrator {
     public record ScanSummary(
             int totalResources,
             int totalRelationships,
-            OffsetDateTime collectedAt
+            OffsetDateTime collectedAt,
+            List<String> warnings
+    ) {
+    }
+
+    private CollectorOutcome collectSafely(ResourceCollector collector, AwsCollectContext context) {
+        try {
+            return new CollectorOutcome(
+                    collector.managedResourceTypes(),
+                    collector.collect(context),
+                    null
+            );
+        } catch (RuntimeException exception) {
+            var warning = "Collector %s failed: %s".formatted(collector.resourceType(), exception.getMessage());
+            log.warn(warning, exception);
+            return new CollectorOutcome(Set.of(), CollectResult.empty(), warning);
+        }
+    }
+
+    private record CollectorOutcome(
+            Set<String> managedResourceTypes,
+            CollectResult result,
+            String warning
     ) {
     }
 }
