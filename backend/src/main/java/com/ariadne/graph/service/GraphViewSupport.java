@@ -38,6 +38,7 @@ final class GraphViewSupport {
             case "SUBNET", "DB_SUBNET_GROUP" -> "subnet-group";
             case "SECURITY_GROUP" -> "sg";
             case "CIDR_SOURCE" -> "cidr";
+            case "IAM_ROLE" -> "iam-role";
             case "LOAD_BALANCER" -> "alb";
             case "ECS_CLUSTER" -> "ecs-cluster-group";
             case "ECS_SERVICE" -> "ecs-service";

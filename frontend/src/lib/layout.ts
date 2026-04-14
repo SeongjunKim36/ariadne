@@ -21,6 +21,8 @@ function nodeSize(node: GraphNodeRecord) {
       return { width: 208, height: 92 };
     case 'sg':
       return { width: 220, height: 96 };
+    case 'iam-role':
+      return { width: 236, height: 100 };
     case 'rds':
       return { width: 240, height: 104 };
     case 'ec2':
@@ -50,6 +52,8 @@ function accentForType(type: string): TopologyNodeData['accent'] {
       return 'blue';
     case 'sg':
       return 'rose';
+    case 'iam-role':
+      return 'slate';
     case 'alb':
       return 'violet';
     case 'ecs-service':
@@ -102,6 +106,14 @@ function describeNode(node: GraphNodeRecord) {
         detail: `${value(data, 'inboundRuleCount') || '0'} in · ${value(data, 'outboundRuleCount') || '0'} out`,
         status: '',
       };
+    case 'iam-role': {
+      const attachedPolicies = Array.isArray(data.attachedPolicies) ? data.attachedPolicies.length : 0;
+      return {
+        subtitle: value(data, 'roleName') || value(data, 'resourceId'),
+        detail: attachedPolicies > 0 ? `${attachedPolicies} policies` : 'trust policy linked',
+        status: value(data, 'environment'),
+      };
+    }
     case 'alb':
       return {
         subtitle: [value(data, 'type'), value(data, 'scheme')].filter(Boolean).join(' · '),
