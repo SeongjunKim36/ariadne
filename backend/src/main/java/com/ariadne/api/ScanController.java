@@ -1,6 +1,7 @@
 package com.ariadne.api;
 
 import com.ariadne.api.dto.ScanStatusResponse;
+import com.ariadne.scan.ScanPreflightService;
 import com.ariadne.scan.ScanService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,9 +18,11 @@ import java.util.UUID;
 public class ScanController {
 
     private final ScanService scanService;
+    private final ScanPreflightService scanPreflightService;
 
-    public ScanController(ScanService scanService) {
+    public ScanController(ScanService scanService, ScanPreflightService scanPreflightService) {
         this.scanService = scanService;
+        this.scanPreflightService = scanPreflightService;
     }
 
     @PostMapping
@@ -36,7 +39,15 @@ public class ScanController {
     }
 
     @GetMapping("/latest")
-    public ScanStatusResponse getLatestScan() {
-        return ScanStatusResponse.from(scanService.getLatestScan());
+    public ResponseEntity<ScanStatusResponse> getLatestScan() {
+        return scanService.findLatestScan()
+                .map(ScanStatusResponse::from)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/preflight")
+    public com.ariadne.api.dto.ScanPreflightResponse getScanPreflight() {
+        return scanPreflightService.inspect();
     }
 }

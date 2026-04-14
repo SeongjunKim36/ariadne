@@ -29,8 +29,7 @@ public class ScanService {
                 .orElseThrow(() -> new IllegalArgumentException("Unknown scan id: " + scanId));
     }
 
-    public ScanRun getLatestScan() {
-        return scanRunRepository.findTopByOrderByStartedAtDesc()
-                .orElseThrow(() -> new IllegalStateException("No scans have been started yet"));
+    public java.util.Optional<ScanRun> findLatestScan() {
+        return scanRunRepository.findTopByOrderByStartedAtDesc();
     }
 }

@@ -1,6 +1,6 @@
-import { startTransition, useDeferredValue, useEffect, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Filter, Focus, LoaderCircle, Search, Sparkles, X } from 'lucide-react';
+import { Filter, Focus, LoaderCircle, Search, Sparkles, TriangleAlert, X } from 'lucide-react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,9 +11,21 @@ import ReactFlow, {
 import useSWR from 'swr';
 import 'reactflow/dist/style.css';
 
-import { fetchGraph, fetchResourceDetail } from '../lib/api';
+import {
+  fetchGraph,
+  fetchLatestScan,
+  fetchResourceDetail,
+  fetchScanPreflight,
+  fetchScanStatus,
+  triggerScan,
+} from '../lib/api';
 import { buildTopologyElements } from '../lib/layout';
-import type { GraphNodeRecord, ResourceDetailResponse } from '../lib/types';
+import type {
+  GraphNodeRecord,
+  ResourceDetailResponse,
+  ScanPreflightResponse,
+  ScanStatusResponse,
+} from '../lib/types';
 import { topologyNodeTypes } from './topologyNodes';
 
 function value(record: Record<string, unknown>, key: string) {
@@ -67,6 +79,39 @@ function normalizePropertyEntries(record: Record<string, unknown>) {
   return [...primary, ...tags];
 }
 
+function scanStatusTone(status: ScanStatusResponse['status'] | null | undefined) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'good';
+    case 'FAILED':
+      return 'bad';
+    case 'RUNNING':
+      return 'running';
+    default:
+      return 'idle';
+  }
+}
+
+function scanStatusCopy(scan: ScanStatusResponse | null | undefined) {
+  if (!scan) {
+    return 'No scan has been run from this workspace yet.';
+  }
+  if (scan.status === 'RUNNING') {
+    return 'Collectors are running. The graph will refresh as soon as this scan completes.';
+  }
+  if (scan.completedAt) {
+    return `Finished ${formatDistanceToNow(new Date(scan.completedAt), { addSuffix: true })}.`;
+  }
+  return 'Scan history is available, but the completion timestamp is missing.';
+}
+
+function preflightTone(preflight: ScanPreflightResponse | undefined) {
+  if (!preflight) {
+    return 'idle';
+  }
+  return preflight.ready ? 'good' : 'bad';
+}
+
 function DetailPanel({
   resourceDetail,
   fallbackNode,
@@ -100,7 +145,7 @@ function DetailPanel({
   }
 
   return (
-    <aside className="detail-panel">
+    <aside className="detail-panel" data-testid="detail-panel">
       <div className="detail-panel-header">
         <div>
           <p className="detail-panel-title">{value(resource.data, 'name') || value(resource.data, 'resourceId')}</p>
@@ -150,8 +195,16 @@ function DetailPanel({
 }
 
 export function TopologyPage() {
+  const nodeTypes = useMemo(() => topologyNodeTypes, []);
   const { data: graph, error, isLoading, mutate } = useSWR('graph', fetchGraph, {
     shouldRetryOnError: false,
+  });
+  const { data: latestScan, mutate: mutateLatestScan } = useSWR('latest-scan', fetchLatestScan, {
+    shouldRetryOnError: false,
+  });
+  const { data: scanPreflight } = useSWR('scan-preflight', fetchScanPreflight, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
   });
 
   const [search, setSearch] = useState('');
@@ -160,6 +213,8 @@ export function TopologyPage() {
   const [activeTypes, setActiveTypes] = useState<string[]>([]);
   const [selectedArn, setSelectedArn] = useState<string | null>(null);
   const [focusedArn, setFocusedArn] = useState<string | null>(null);
+  const [activeScanId, setActiveScanId] = useState<string | null>(null);
+  const [scanActionError, setScanActionError] = useState<string | null>(null);
 
   const deferredSearch = useDeferredValue(search);
   const { data: resourceDetail } = useSWR(
@@ -167,6 +222,35 @@ export function TopologyPage() {
     ([, arn]) => fetchResourceDetail(arn),
     { shouldRetryOnError: false },
   );
+  const pollScanId = activeScanId ?? (latestScan?.status === 'RUNNING' ? latestScan.scanId : null);
+  const { data: polledScan } = useSWR(
+    pollScanId ? ['scan-status', pollScanId] : null,
+    ([, scanId]) => fetchScanStatus(scanId),
+    {
+      shouldRetryOnError: false,
+      refreshInterval: (current) => (current?.status === 'RUNNING' ? 1500 : 0),
+    },
+  );
+  const currentScan = polledScan ?? latestScan;
+  const scanIsRunning = currentScan?.status === 'RUNNING';
+
+  useEffect(() => {
+    if (latestScan?.status === 'RUNNING') {
+      setActiveScanId((current) => current ?? latestScan.scanId);
+    }
+  }, [latestScan?.scanId, latestScan?.status]);
+
+  useEffect(() => {
+    if (!polledScan) {
+      return;
+    }
+
+    mutateLatestScan(polledScan, { revalidate: false });
+    if (polledScan.status !== 'RUNNING') {
+      setActiveScanId(null);
+      void mutate();
+    }
+  }, [polledScan, mutateLatestScan, mutate]);
 
   const nodesById = new Map((graph?.nodes ?? []).map((node) => [node.id, node]));
   const allTypes = Array.from(new Set((graph?.nodes ?? []).map((node) => node.type))).sort();
@@ -260,6 +344,20 @@ export function TopologyPage() {
     });
   };
 
+  const startScan = async () => {
+    setScanActionError(null);
+    try {
+      const scan = await triggerScan();
+      setActiveScanId(scan.scanId);
+      await mutateLatestScan(scan, { revalidate: false });
+    } catch (scanError) {
+      const message = scanError instanceof Error
+        ? scanError.message
+        : 'A new scan could not be started.';
+      setScanActionError(message);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="topology-loading">
@@ -294,6 +392,16 @@ export function TopologyPage() {
             <button type="button" className="ghost-button" onClick={() => mutate()}>
               Refresh graph
             </button>
+            <button
+              type="button"
+              className="ghost-button primary-button"
+              onClick={() => void startScan()}
+              disabled={!scanPreflight?.ready || scanIsRunning}
+              data-testid="start-scan-button"
+            >
+              {scanIsRunning ? <LoaderCircle className="spin" size={14} /> : null}
+              {scanIsRunning ? 'Scanning…' : 'Start scan'}
+            </button>
             {focusedArn ? (
               <button type="button" className="ghost-button" onClick={() => setFocusedArn(null)}>
                 <Focus size={14} />
@@ -302,6 +410,54 @@ export function TopologyPage() {
             ) : null}
           </div>
         </header>
+
+        <section
+          className="scan-status-bar"
+          data-tone={scanStatusTone(currentScan?.status)}
+          data-testid="scan-status-banner"
+        >
+          <div className="scan-status-main">
+            <div className="scan-status-heading">
+              <span className="status-pill" data-tone={scanStatusTone(currentScan?.status)}>
+                {currentScan?.status ?? 'IDLE'}
+              </span>
+              <span className="status-pill" data-tone={preflightTone(scanPreflight)}>
+                {scanPreflight?.ready ? 'AWS READY' : 'AWS BLOCKED'}
+              </span>
+            </div>
+            <p className="scan-status-copy">{scanStatusCopy(currentScan)}</p>
+            <p className="scan-status-copy secondary">
+              {scanPreflight?.message ?? 'Checking whether local AWS credentials are ready for a scan…'}
+            </p>
+            <p className="scan-status-meta">
+              {scanPreflight?.accountId
+                ? `${scanPreflight.accountId} · ${scanPreflight.region}`
+                : scanPreflight?.region ?? 'ap-northeast-2'}
+              {currentScan ? ` · ${currentScan.totalNodes} nodes · ${currentScan.totalEdges} edges` : ''}
+            </p>
+          </div>
+
+          <div className="scan-status-side">
+            {currentScan?.errorMessage ? (
+              <div className="scan-callout" data-tone="bad">
+                <TriangleAlert size={16} />
+                <span>{currentScan.errorMessage}</span>
+              </div>
+            ) : null}
+            {currentScan?.warningMessage ? (
+              <div className="scan-callout" data-tone="warn">
+                <TriangleAlert size={16} />
+                <span>{currentScan.warningMessage}</span>
+              </div>
+            ) : null}
+            {scanActionError ? (
+              <div className="scan-callout" data-tone="bad">
+                <TriangleAlert size={16} />
+                <span>{scanActionError}</span>
+              </div>
+            ) : null}
+          </div>
+        </section>
 
         <div className="topology-content">
           <aside className="filter-panel">
@@ -371,14 +527,14 @@ export function TopologyPage() {
             </div>
           </aside>
 
-          <div className="topology-canvas-shell">
+          <div className="topology-canvas-shell" data-testid="topology-canvas">
             <ReactFlowProvider>
               <>
                 <ReactFlow
                   className="topology-flow"
                   nodes={flow.nodes}
                   edges={flow.edges}
-                  nodeTypes={topologyNodeTypes}
+                  nodeTypes={nodeTypes}
                   fitView
                   nodesDraggable={false}
                   nodesConnectable={false}

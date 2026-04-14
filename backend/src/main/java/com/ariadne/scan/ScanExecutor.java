@@ -39,7 +39,7 @@ public class ScanExecutor {
             scanRun.markFailed(
                     completedAt,
                     java.time.Duration.between(startedAt, completedAt).toMillis(),
-                    exception.getMessage()
+                    AwsFailureMessageResolver.toUserMessage(exception)
             );
         }
 
