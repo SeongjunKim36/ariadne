@@ -14,7 +14,8 @@ public record ScanStatusResponse(
         int totalNodes,
         int totalEdges,
         long durationMs,
-        String errorMessage
+        String errorMessage,
+        String warningMessage
 ) {
 
     public static ScanStatusResponse from(ScanRun scanRun) {
@@ -26,7 +27,8 @@ public record ScanStatusResponse(
                 scanRun.getTotalNodes(),
                 scanRun.getTotalEdges(),
                 scanRun.getDurationMs(),
-                scanRun.getErrorMessage()
+                scanRun.getErrorMessage(),
+                scanRun.getWarningMessage()
         );
     }
 }

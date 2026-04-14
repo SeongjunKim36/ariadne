@@ -261,7 +261,7 @@ ariadne/
 (:Ec2Instance)-[:BELONGS_TO]->(:Subnet)
 (:Subnet)-[:BELONGS_TO]->(:Vpc)
 (:RdsInstance)-[:BELONGS_TO]->(:Subnet)   # 서브넷 그룹의 서브넷들
-(:LambdaFunction)-[:BELONGS_TO]->(:Vpc)   # VPC 내 Lambda만
+(:LambdaFunction)-[:BELONGS_TO]->(:Subnet)   # VPC 내 Lambda는 연결된 서브넷 기준
 
 # 보안 그룹 연결
 (:Ec2Instance)-[:HAS_SG]->(:SecurityGroup)
@@ -737,15 +737,18 @@ services:
         "ec2:DescribeRouteTables",
         "rds:DescribeDBInstances",
         "rds:DescribeDBSubnetGroups",
+        "rds:ListTagsForResource",
         "ecs:ListClusters",
         "ecs:DescribeClusters",
         "ecs:ListServices",
         "ecs:DescribeServices",
         "ecs:DescribeTaskDefinition",
+        "ecs:ListTagsForResource",
         "elasticloadbalancing:DescribeLoadBalancers",
         "elasticloadbalancing:DescribeTargetGroups",
         "elasticloadbalancing:DescribeTargetHealth",
         "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:DescribeTags",
         "s3:ListAllMyBuckets",
         "s3:GetBucketLocation",
         "s3:GetBucketEncryption",
@@ -753,10 +756,12 @@ services:
         "s3:GetBucketPublicAccessBlock",
         "s3:GetBucketNotification",
         "lambda:ListFunctions",
+        "lambda:ListTags",
         "lambda:GetFunction",
         "lambda:ListEventSourceMappings",
         "route53:ListHostedZones",
         "route53:ListResourceRecordSets",
+        "route53:ListTagsForResource",
         "sts:GetCallerIdentity"
       ],
       "Resource": "*"

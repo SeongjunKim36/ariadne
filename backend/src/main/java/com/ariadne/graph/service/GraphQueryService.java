@@ -6,14 +6,12 @@ import com.ariadne.scan.ScanStatus;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,6 +29,7 @@ public class GraphQueryService {
     public GraphResponse fetchGraph(String environment, Set<String> resourceTypes, String vpcId) {
         var nodeRows = neo4jClient.query("""
                         MATCH (n:AwsResource)
+                        WHERE coalesce(n.stale, false) = false
                         RETURN properties(n) AS properties, labels(n) AS labels
                         ORDER BY n.name, n.resourceId
                         """)
@@ -39,6 +38,8 @@ public class GraphQueryService {
 
         var edgeRows = neo4jClient.query("""
                         MATCH (source:AwsResource)-[r]->(target:AwsResource)
+                        WHERE coalesce(source.stale, false) = false
+                          AND coalesce(target.stale, false) = false
                         RETURN source.arn AS sourceArn,
                                target.arn AS targetArn,
                                type(r) AS relationshipType,
@@ -48,24 +49,36 @@ public class GraphQueryService {
                 .all();
 
         var nodesByArn = new LinkedHashMap<String, Map<String, Object>>();
+        var propertiesByArn = new HashMap<String, Map<String, Object>>();
         var parentByChild = new HashMap<String, String>();
+        var neighborsByArn = new HashMap<String, Set<String>>();
         var resourceTypeByArn = new HashMap<String, String>();
 
         for (var edgeRow : edgeRows) {
+            var sourceArn = (String) edgeRow.get("sourceArn");
+            var targetArn = (String) edgeRow.get("targetArn");
             var relationshipType = (String) edgeRow.get("relationshipType");
-            if ("BELONGS_TO".equals(relationshipType)) {
-                parentByChild.put((String) edgeRow.get("sourceArn"), (String) edgeRow.get("targetArn"));
+            if (GraphViewSupport.isParentRelationship(relationshipType)) {
+                parentByChild.put(sourceArn, targetArn);
             }
+            neighborsByArn.computeIfAbsent(sourceArn, ignored -> new HashSet<>()).add(targetArn);
+            neighborsByArn.computeIfAbsent(targetArn, ignored -> new HashSet<>()).add(sourceArn);
         }
 
         for (var nodeRow : nodeRows) {
             @SuppressWarnings("unchecked")
             var properties = new LinkedHashMap<>((Map<String, Object>) nodeRow.get("properties"));
             var arn = (String) properties.get("arn");
-            var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(Locale.ROOT);
+            propertiesByArn.put(arn, properties);
+            var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
             resourceTypeByArn.put(arn, resourceType);
+        }
+
+        for (var entry : propertiesByArn.entrySet()) {
+            var arn = entry.getKey();
+            var properties = entry.getValue();
             if (matchesFilters(properties, resourceTypes, environment)
-                    && belongsToVpc(properties, parentByChild, nodesByArn, nodeRows, vpcId)) {
+                    && belongsToVpc(properties, parentByChild, propertiesByArn, neighborsByArn, vpcId)) {
                 nodesByArn.put(arn, properties);
             }
         }
@@ -75,11 +88,12 @@ public class GraphQueryService {
             var arn = entry.getKey();
             var properties = entry.getValue();
             var parentArn = parentByChild.get(arn);
+            var parentResourceType = resourceTypeByArn.get(parentArn);
             nodes.add(new GraphResponse.GraphNode(
                     arn,
-                    toFrontendType((String) properties.get("resourceType")),
+                    GraphViewSupport.toFrontendType((String) properties.get("resourceType")),
                     properties,
-                    "VPC".equals(resourceTypeByArn.get(parentArn)) ? parentArn : null
+                    GraphViewSupport.isGroupParent(parentResourceType) ? parentArn : null
             ));
         }
 
@@ -120,15 +134,15 @@ public class GraphQueryService {
                 || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"));
         var matchesType = resourceTypes == null
                 || resourceTypes.isEmpty()
-                || resourceTypes.contains(((String) properties.getOrDefault("resourceType", "")).toUpperCase(Locale.ROOT));
+                || resourceTypes.contains(((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT));
         return matchesEnvironment && matchesType;
     }
 
     private boolean belongsToVpc(
             Map<String, Object> properties,
             Map<String, String> parentByChild,
-            Map<String, Map<String, Object>> nodesByArn,
-            java.util.Collection<Map<String, Object>> nodeRows,
+            Map<String, Map<String, Object>> propertiesByArn,
+            Map<String, Set<String>> neighborsByArn,
             String vpcId
     ) {
         if (vpcId == null || vpcId.isBlank()) {
@@ -148,7 +162,7 @@ public class GraphQueryService {
 
             var currentProperties = currentArn.equals(arn)
                     ? properties
-                    : findNodeProperties(currentArn, nodesByArn, nodeRows);
+                    : propertiesByArn.get(currentArn);
             if (currentProperties == null) {
                 continue;
             }
@@ -162,39 +176,14 @@ public class GraphQueryService {
             if (parentArn != null) {
                 queue.add(parentArn);
             }
+
+            for (var neighborArn : neighborsByArn.getOrDefault(currentArn, Set.of())) {
+                if (!visited.contains(neighborArn)) {
+                    queue.add(neighborArn);
+                }
+            }
         }
 
         return false;
-    }
-
-    private Map<String, Object> findNodeProperties(
-            String arn,
-            Map<String, Map<String, Object>> nodesByArn,
-            java.util.Collection<Map<String, Object>> nodeRows
-    ) {
-        var cached = nodesByArn.get(arn);
-        if (cached != null) {
-            return cached;
-        }
-
-        for (var nodeRow : nodeRows) {
-            @SuppressWarnings("unchecked")
-            var properties = (Map<String, Object>) nodeRow.get("properties");
-            if (arn.equals(properties.get("arn"))) {
-                return properties;
-            }
-        }
-        return null;
-    }
-
-    private String toFrontendType(String resourceType) {
-        if (resourceType == null) {
-            return "unknown";
-        }
-        return switch (resourceType.toUpperCase(Locale.ROOT)) {
-            case "VPC" -> "vpc-group";
-            case "SUBNET" -> "subnet-group";
-            default -> resourceType.toLowerCase(Locale.ROOT);
-        };
     }
 }

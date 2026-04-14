@@ -50,48 +50,48 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-9 | SecurityGroupCollector 구현 | [ ] | | |
-| 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [ ] | | |
-| 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [ ] | | |
-| 1-12 | 삭제된 리소스 stale 마킹 로직 | [ ] | | |
-| 1-13 | 수집기 단위 테스트 (모킹) | [ ] | | |
+| 1-9 | SecurityGroupCollector 구현 | [x] | 2026-04-13 | VPC 소속 관계 포함 |
+| 1-10 | Ec2Collector 구현 + BELONGS_TO, HAS_SG 관계 | [x] | 2026-04-13 | LocalStack happy-path로 검증 |
+| 1-11 | RdsCollector 구현 + DbSubnetGroup + IN_SUBNET_GROUP | [x] | 2026-04-13 | RDS 태그 수집 + HAS_SG/CONTAINS 포함, LocalStack happy-path는 Docker 환경 복구 후 재검증 |
+| 1-12 | 삭제된 리소스 stale 마킹 로직 | [x] | 2026-04-14 | 성공한 수집기 타입 기준 stale 처리 + stale 노드 관계 정리 |
+| 1-13 | 수집기 단위 테스트 (모킹) | [x] | 2026-04-13 | SecurityGroupCollectorTest, Ec2CollectorTest |
 
 ### Week 3: ALB + 오케스트레이터 + API
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [ ] | | |
-| 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [ ] | | |
+| 1-14 | AlbCollector 구현 + ROUTES_TO, HAS_SG 관계 | [x] | 2026-04-14 | ALB → EC2/Lambda 라우팅 + VPC/HAS_SG 포함 |
+| 1-15 | CollectorOrchestrator (병렬 수집 + 부분 실패 처리) | [x] | 2026-04-14 | 병렬 수집 + warningMessage 노출 |
 | 1-16 | ScanRun JPA 엔티티 (PostgreSQL) | [x] | 2026-04-13 | ScanRun + Repository + Service 추가 |
 | 1-17 | POST /api/scan (202 Accepted + scanId) | [x] | 2026-04-13 | ScanController 구현 |
 | 1-18 | GET /api/scan/{scanId}/status | [x] | 2026-04-13 | ScanController 구현 |
 | 1-19 | GET /api/graph (React Flow 형식) | [x] | 2026-04-13 | GraphController + GraphQueryService 구현 |
-| 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [ ] | | |
-| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VpcSubnetScanIntegrationTest 추가 |
+| 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [x] | 2026-04-14 | ResourceController + ResourceQueryService 추가 |
+| 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VPC/Subnet/SG/EC2 LocalStack 스캔 검증 |
 
 ### Week 4: 프론��엔드
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-22 | React Flow 기본 뷰 (TopologyCanvas) | [ ] | | |
-| 1-23 | 커스텀 노드: Ec2Node, RdsNode, VpcGroupNode, SubnetGroupNode, SgNode, AlbNode | [ ] | | |
-| 1-24 | dagre 레이아웃 적용 (compound graph) | [ ] | | |
-| 1-25 | FilterPanel (리소스 타입 + 환경 + VPC) | [ ] | | |
-| 1-26 | DetailPanel (노드 클릭 → 상세 정보) | [ ] | | |
-| 1-27 | 검색 기능 (이름/ID) | [ ] | | |
-| 1-28 | MiniMap | [ ] | | |
-| 1-29 | 노드 더블클릭 → 연결 하이라이트 (역참조) | [ ] | | |
+| 1-22 | React Flow 기본 뷰 (TopologyCanvas) | [x] | 2026-04-14 | `/api/graph` 연동된 실제 topology 화면 구현 |
+| 1-23 | 커스텀 노드: Ec2Node, RdsNode, VpcGroupNode, SubnetGroupNode, SgNode, AlbNode | [x] | 2026-04-14 | topologyNodes.tsx 추가 |
+| 1-24 | dagre 레이아웃 적용 (compound graph) | [x] | 2026-04-14 | 그룹 내부 leaf 배치에 dagre 적용 |
+| 1-25 | FilterPanel (리소스 타입 + 환경 + VPC) | [x] | 2026-04-14 | 필터 + 초기화 액션 포함 |
+| 1-26 | DetailPanel (노드 클릭 → 상세 정보) | [x] | 2026-04-14 | `/api/resources` 기반 연결 정보 표시 |
+| 1-27 | 검색 기능 (이름/ID) | [x] | 2026-04-14 | name/resourceId/tag 검색 |
+| 1-28 | MiniMap | [x] | 2026-04-14 | React Flow MiniMap 연동 |
+| 1-29 | 노드 더블클릭 → 연결 하이라이트 (역참조) | [x] | 2026-04-14 | focused resource 주변 관계 강조 |
 
 ### Week 5: 확장 수집기
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 1-30 | EcsCollector (Cluster + Service) + RUNS_IN | [ ] | | |
-| 1-31 | S3Collector + TRIGGERS 관계 | [ ] | | |
-| 1-32 | LambdaCollector + BELONGS_TO(Subnet), HAS_SG | [ ] | | |
-| 1-33 | Route53Collector (region="global") + HAS_RECORD | [ ] | | |
-| 1-34 | 프론트엔드 신규 노드: EcsClusterGroupNode, EcsServiceNode, S3Node, LambdaNode, Route53Node | [ ] | | |
-| 1-35 | 그래프 스키마 안정화 (실 데이터 기반 조정) | [ ] | | |
+| 1-30 | EcsCollector (Cluster + Service) + RUNS_IN | [x] | 2026-04-14 | ECS cluster/service + ALB target group 연동 |
+| 1-31 | S3Collector + TRIGGERS 관계 | [x] | 2026-04-14 | S3 bucket 속성 + Lambda notification 수집 |
+| 1-32 | LambdaCollector + BELONGS_TO(Subnet), HAS_SG | [x] | 2026-04-14 | VPC Lambda subnet/sg 관계 반영 |
+| 1-33 | Route53Collector (region="global") + HAS_RECORD | [x] | 2026-04-14 | ALB/EC2/RDS DNS 매핑 지원 |
+| 1-34 | 프론트엔드 신규 노드: EcsClusterGroupNode, EcsServiceNode, S3Node, LambdaNode, Route53Node | [x] | 2026-04-14 | React Flow 신규 타입/컬러/상세 정보 확장 |
+| 1-35 | 그래프 스키마 안정화 (실 데이터 기반 조정) | [x] | 2026-04-14 | LB/Route53 인덱스 + 타입 매핑 보강 |
 
 ### Week 6: 통합 + 검증
 
@@ -99,12 +99,12 @@
 |---|---|---|---|---|
 | 1-36 | dongne-v2 실계정 연동 테스트 | [ ] | | |
 | 1-37 | 전체 수집 → React Flow 시각화 E2E 확인 | [ ] | | |
-| 1-38 | LIKELY_USES 추론 관계 생성 (같은 SG + DB 포트) | [ ] | | |
-| 1-39 | "prod 환경에 뭐가 돌아가고 있어?" 답변 가능 확인 | [ ] | | 5대 질문 #1 |
-| 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [ ] | | 5대 질문 #2 |
-| 1-41 | 버그 ��정 + UI 다듬기 | [ ] | | |
+| 1-38 | LIKELY_USES 추론 관계 생성 (같은 SG + DB 포트) | [x] | 2026-04-14 | GraphInferenceService 추가 + 스캔 후 추론 관계 재생성 |
+| 1-39 | "prod 환경에 뭐가 돌아가고 있어?" 답변 가능 확인 | [x] | 2026-04-14 | GraphQueryService 통합 테스트로 prod VPC 토폴로지 검증 |
+| 1-40 | "이 RDS를 쓰는 애들이 누구야?" 답변 가능 확인 | [x] | 2026-04-14 | ResourceQueryService 통합 테스트로 LIKELY_USES 역참조 검증 |
+| 1-41 | 버그 수정 + UI 다듬기 | [ ] | | |
 
-**Phase 1 진행률**: 12/41 (29%)
+**Phase 1 진행률**: 37/41 (90%)
 
 ---
 

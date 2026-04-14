@@ -7,9 +7,11 @@ import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,16 +30,20 @@ public class GraphPersistenceService {
                 "CREATE INDEX idx_resource_id IF NOT EXISTS FOR (n:AwsResource) ON (n.resourceId)",
                 "CREATE INDEX idx_resource_type IF NOT EXISTS FOR (n:AwsResource) ON (n.resourceType)",
                 "CREATE INDEX idx_environment IF NOT EXISTS FOR (n:AwsResource) ON (n.environment)",
-                "CREATE INDEX idx_vpc_id IF NOT EXISTS FOR (n:Vpc) ON (n.resourceId)"
+                "CREATE INDEX idx_vpc_id IF NOT EXISTS FOR (n:Vpc) ON (n.resourceId)",
+                "CREATE INDEX idx_sg_group_id IF NOT EXISTS FOR (n:SecurityGroup) ON (n.groupId)",
+                "CREATE INDEX idx_lb_dns_name IF NOT EXISTS FOR (n:LoadBalancer) ON (n.dnsName)",
+                "CREATE INDEX idx_route53_zone_id IF NOT EXISTS FOR (n:Route53Zone) ON (n.hostedZoneId)"
         )) {
             neo4jClient.query(statement).run();
         }
     }
 
     @Transactional
-    public void save(CollectResult result) {
+    public void save(CollectResult result, OffsetDateTime collectedAt, Set<String> managedResourceTypes) {
         saveResources(result.resources());
         saveRelationships(result.relationships());
+        markMissingResourcesAsStale(result.resources(), collectedAt, managedResourceTypes);
     }
 
     private void saveResources(List<AwsResource> resources) {
@@ -60,6 +66,8 @@ public class GraphPersistenceService {
                     UNWIND $rows AS row
                     MERGE (n:AwsResource {arn: row.arn})
                     SET n:%s
+                    SET n.stale = false,
+                        n.staleSince = null
                     SET n += row.properties
                     """.formatted(label);
 
@@ -68,6 +76,39 @@ public class GraphPersistenceService {
                     .to("rows")
                     .run();
         });
+    }
+
+    private void markMissingResourcesAsStale(
+            List<AwsResource> resources,
+            OffsetDateTime collectedAt,
+            Set<String> managedResourceTypes
+    ) {
+        if (managedResourceTypes == null || managedResourceTypes.isEmpty()) {
+            return;
+        }
+
+        var activeArns = resources.stream()
+                .map(AwsResource::getArn)
+                .toList();
+
+        neo4jClient.query("""
+                        MATCH (n:AwsResource)
+                        WHERE n.resourceType IN $managedResourceTypes
+                          AND NOT n.arn IN $activeArns
+                        SET n.stale = true,
+                            n.staleSince = coalesce(n.staleSince, $collectedAt)
+                        WITH collect(n) AS staleNodes
+                        UNWIND staleNodes AS staleNode
+                        OPTIONAL MATCH (staleNode)-[rel]-()
+                        DELETE rel
+                        """)
+                .bind(managedResourceTypes)
+                .to("managedResourceTypes")
+                .bind(activeArns)
+                .to("activeArns")
+                .bind(collectedAt)
+                .to("collectedAt")
+                .run();
     }
 
     private void saveRelationships(List<com.ariadne.graph.relationship.GraphRelationship> relationships) {

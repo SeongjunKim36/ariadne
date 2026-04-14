@@ -31,7 +31,8 @@ public class ScanExecutor {
                     completedAt,
                     summary.totalResources(),
                     summary.totalRelationships(),
-                    java.time.Duration.between(startedAt, completedAt).toMillis()
+                    java.time.Duration.between(startedAt, completedAt).toMillis(),
+                    summary.warnings().isEmpty() ? null : String.join("\n", summary.warnings())
             );
         } catch (RuntimeException exception) {
             var completedAt = OffsetDateTime.now(ZoneOffset.UTC);
