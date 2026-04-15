@@ -133,7 +133,7 @@
 | 2-12 | SSM RunCommand → nginx config 수집 (find + cat) | [x] | 2026-04-15 | `AWS-RunShellScript`로 SSM 관리 인스턴스의 nginx raw config 수집 + `NginxConfig` detail-only 노드 저장 |
 | 2-13 | nginx config 파싱 → upstream/server_name/proxy_pass | [x] | 2026-04-15 | `NginxConfigParser`로 server name / upstream / proxy_pass 메타데이터 추출 후 `NginxConfig` 상세 속성에 저장 |
 | 2-14 | RUNS_NGINX, PROXIES_TO 관계 생성 | [x] | 2026-04-15 | `RUNS_NGINX` + `PROXIES_TO` 생성, loopback/EC2 IP·Name/ALB DNS 기반 보수적 타깃 매핑과 집계형 관계 프로퍼티 지원 |
-| 2-15 | 플러그인 활성화 시 추가 IAM 안내 | [ ] | | |
+| 2-15 | 플러그인 활성화 시 추가 IAM 안내 | [x] | 2026-04-15 | preflight `warningMessage`와 scan warning에 nginx SSM 권한 안내 추가, `iam/ariadne-nginx-plugin-policy.json` 제공 |
 
 ### Week 3: 보안 하드닝
 
@@ -155,7 +155,7 @@
 | 2-24 | SG 시각화 UX 개선 | [ ] | | |
 | 2-25 | 리댁션 엔진 엣지 케이스 처리 | [ ] | | |
 
-**Phase 2 진행률**: 14/25 (56%)
+**Phase 2 진행률**: 15/25 (60%)
 
 ---
 
