@@ -64,4 +64,5 @@ export type ScanPreflightResponse = {
   callerArn: string | null;
   authenticationMode: 'static' | 'default-chain' | string;
   message: string;
+  warningMessage: string | null;
 };

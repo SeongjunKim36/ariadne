@@ -243,7 +243,10 @@ class NginxPluginTest {
         var result = plugin.collect(context());
 
         assertThat(result.result().resources()).isEmpty();
-        assertThat(result.warnings()).containsExactly("Plugin nginx skipped: no SSM-managed EC2 instances were found.");
+        assertThat(result.warnings()).containsExactly(
+                "nginx plugin is enabled, but no online SSM-managed EC2 instances were found. "
+                        + "Install the SSM Agent and confirm the instances appear in Systems Manager before using nginx collection."
+        );
         assertThat(result.managedResourceTypes()).containsExactly("NGINX_CONFIG");
     }
 

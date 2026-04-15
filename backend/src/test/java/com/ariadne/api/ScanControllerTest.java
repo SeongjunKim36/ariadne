@@ -50,14 +50,16 @@ class ScanControllerTest {
                 null,
                 null,
                 "default-chain",
-                "AWS credentials are missing or the local SSO session expired. Run `aws sso login` or set static credentials before scanning."
+                "AWS credentials are missing or the local SSO session expired. Run `aws sso login` or set static credentials before scanning.",
+                null
         ));
 
         mockMvc.perform(get("/api/scan/preflight"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ready").value(false))
                 .andExpect(jsonPath("$.region").value("ap-northeast-2"))
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("aws sso login")));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("aws sso login")))
+                .andExpect(jsonPath("$.warningMessage").value(org.hamcrest.Matchers.nullValue()));
     }
 
     @Test

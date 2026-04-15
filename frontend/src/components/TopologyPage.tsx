@@ -502,6 +502,12 @@ export function TopologyPage() {
                 <span>{scanActionError}</span>
               </div>
             ) : null}
+            {scanPreflight?.warningMessage ? (
+              <div className="scan-callout" data-tone="warn">
+                <TriangleAlert size={16} />
+                <span>{scanPreflight.warningMessage}</span>
+              </div>
+            ) : null}
           </div>
         </section>
 

@@ -6,6 +6,7 @@ public record ScanPreflightResponse(
         String accountId,
         String callerArn,
         String authenticationMode,
-        String message
+        String message,
+        String warningMessage
 ) {
 }
