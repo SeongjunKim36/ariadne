@@ -13,7 +13,12 @@ public final class NginxConfig extends AwsResource {
     private String sourceInstanceArn;
     private String sourceInstanceName;
     private List<String> configPaths;
+    private List<String> serverNames;
+    private List<String> upstreamNames;
+    private List<String> proxyPassTargets;
     private String rawConfig;
+    private String upstreams;
+    private String proxyPasses;
     private Integer rawConfigBytes;
     private Boolean truncated;
     private String collectionMethod;
@@ -35,7 +40,12 @@ public final class NginxConfig extends AwsResource {
             String sourceInstanceArn,
             String sourceInstanceName,
             List<String> configPaths,
+            List<String> serverNames,
+            List<String> upstreamNames,
+            List<String> proxyPassTargets,
             String rawConfig,
+            String upstreams,
+            String proxyPasses,
             Integer rawConfigBytes,
             Boolean truncated,
             String collectionMethod,
@@ -46,7 +56,12 @@ public final class NginxConfig extends AwsResource {
         this.sourceInstanceArn = sourceInstanceArn;
         this.sourceInstanceName = sourceInstanceName;
         this.configPaths = configPaths;
+        this.serverNames = serverNames;
+        this.upstreamNames = upstreamNames;
+        this.proxyPassTargets = proxyPassTargets;
         this.rawConfig = rawConfig;
+        this.upstreams = upstreams;
+        this.proxyPasses = proxyPasses;
         this.rawConfigBytes = rawConfigBytes;
         this.truncated = truncated;
         this.collectionMethod = collectionMethod;
@@ -64,7 +79,12 @@ public final class NginxConfig extends AwsResource {
         put(properties, "sourceInstanceArn", sourceInstanceArn);
         put(properties, "sourceInstanceName", sourceInstanceName);
         put(properties, "configPaths", configPaths);
+        put(properties, "serverNames", serverNames);
+        put(properties, "upstreamNames", upstreamNames);
+        put(properties, "proxyPassTargets", proxyPassTargets);
         put(properties, "rawConfig", rawConfig);
+        put(properties, "upstreams", upstreams);
+        put(properties, "proxyPasses", proxyPasses);
         put(properties, "rawConfigBytes", rawConfigBytes);
         put(properties, "truncated", truncated);
         put(properties, "collectionMethod", collectionMethod);
