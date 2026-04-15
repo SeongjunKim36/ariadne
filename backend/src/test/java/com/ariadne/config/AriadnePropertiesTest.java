@@ -16,6 +16,7 @@ class AriadnePropertiesTest {
         var properties = new AriadneProperties();
 
         assertThat(properties.getScan().getSchedule()).isEqualTo("0 0 * * * *");
+        assertThat(properties.getLlm().getTransmissionLevel()).isNull();
         assertThat(properties.getPlugins().getNginx().isEnabled()).isFalse();
         assertThat(properties.getPlugins().getNginx().getSsmTimeoutSeconds()).isEqualTo(30);
         assertThat(properties.getPlugins().getNginx().getConfigPaths())
@@ -26,6 +27,7 @@ class AriadnePropertiesTest {
     void bindsNestedNginxPluginOverrides() {
         var binder = new Binder(new MapConfigurationPropertySource(Map.of(
                 "ariadne.scan.schedule", "0 */30 * * * *",
+                "ariadne.llm.transmission-level", "verbose",
                 "ariadne.plugins.nginx.enabled", "true",
                 "ariadne.plugins.nginx.ssm-timeout-seconds", "45",
                 "ariadne.plugins.nginx.config-paths[0]", "/etc/nginx/nginx.conf",
@@ -36,6 +38,7 @@ class AriadnePropertiesTest {
                 .orElseGet(AriadneProperties::new);
 
         assertThat(properties.getScan().getSchedule()).isEqualTo("0 */30 * * * *");
+        assertThat(properties.getLlm().getTransmissionLevel()).isEqualTo("verbose");
         assertThat(properties.getPlugins().getNginx().isEnabled()).isTrue();
         assertThat(properties.getPlugins().getNginx().getSsmTimeoutSeconds()).isEqualTo(45);
         assertThat(properties.getPlugins().getNginx().getConfigPaths())

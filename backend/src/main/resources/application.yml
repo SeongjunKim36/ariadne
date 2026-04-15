@@ -29,6 +29,8 @@ aws:
 ariadne:
   scan:
     schedule: "0 0 * * * *"  # every hour
+  llm:
+    transmission-level: strict
   plugins:
     nginx:
       enabled: false

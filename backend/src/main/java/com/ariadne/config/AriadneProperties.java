@@ -10,6 +10,7 @@ public class AriadneProperties {
 
     private final Scan scan = new Scan();
     private final Plugins plugins = new Plugins();
+    private final Llm llm = new Llm();
 
     public Scan getScan() {
         return scan;
@@ -17,6 +18,10 @@ public class AriadneProperties {
 
     public Plugins getPlugins() {
         return plugins;
+    }
+
+    public Llm getLlm() {
+        return llm;
     }
 
     public static class Scan {
@@ -41,6 +46,24 @@ public class AriadneProperties {
 
         public Nginx getNginx() {
             return nginx;
+        }
+    }
+
+    public static class Llm {
+
+        private String transmissionLevel;
+
+        public String getTransmissionLevel() {
+            return transmissionLevel;
+        }
+
+        public void setTransmissionLevel(String transmissionLevel) {
+            if (transmissionLevel == null) {
+                this.transmissionLevel = null;
+                return;
+            }
+            var normalized = transmissionLevel.trim();
+            this.transmissionLevel = normalized.isEmpty() ? null : normalized;
         }
     }
 
