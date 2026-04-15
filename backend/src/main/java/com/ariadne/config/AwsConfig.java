@@ -19,7 +19,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sts.StsClient;
 
 @Configuration
-@EnableConfigurationProperties(AwsProperties.class)
+@EnableConfigurationProperties({AwsProperties.class, AriadneProperties.class})
 public class AwsConfig {
 
     private final AwsProperties awsProperties;

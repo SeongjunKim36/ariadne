@@ -29,3 +29,10 @@ aws:
 ariadne:
   scan:
     schedule: "0 0 * * * *"  # every hour
+  plugins:
+    nginx:
+      enabled: false
+      ssm-timeout-seconds: 30
+      config-paths:
+        - /etc/nginx/nginx.conf
+        - /etc/nginx/conf.d/

@@ -3,6 +3,8 @@ package com.ariadne.collector;
 import com.ariadne.config.AwsProperties;
 import com.ariadne.graph.service.GraphInferenceService;
 import com.ariadne.graph.service.GraphPersistenceService;
+import com.ariadne.plugin.CollectorPlugin;
+import com.ariadne.plugin.PluginCollectResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class CollectorOrchestrator {
     private static final Logger log = LoggerFactory.getLogger(CollectorOrchestrator.class);
 
     private final List<ResourceCollector> collectors;
+    private final List<CollectorPlugin> plugins;
     private final GraphPersistenceService graphPersistenceService;
     private final GraphInferenceService graphInferenceService;
     private final StsClient stsClient;
@@ -29,6 +32,7 @@ public class CollectorOrchestrator {
 
     public CollectorOrchestrator(
             List<ResourceCollector> collectors,
+            List<CollectorPlugin> plugins,
             GraphPersistenceService graphPersistenceService,
             GraphInferenceService graphInferenceService,
             StsClient stsClient,
@@ -36,6 +40,9 @@ public class CollectorOrchestrator {
     ) {
         this.collectors = collectors.stream()
                 .sorted(Comparator.comparing(ResourceCollector::resourceType))
+                .toList();
+        this.plugins = plugins.stream()
+                .sorted(Comparator.comparing(CollectorPlugin::pluginId))
                 .toList();
         this.graphPersistenceService = graphPersistenceService;
         this.graphInferenceService = graphInferenceService;
@@ -60,6 +67,16 @@ public class CollectorOrchestrator {
             }
             managedResourceTypes.addAll(outcome.managedResourceTypes());
             aggregate = aggregate.merge(outcome.result());
+        }
+
+        for (var plugin : plugins) {
+            if (!plugin.enabled()) {
+                continue;
+            }
+            var pluginResult = collectPluginSafely(plugin, context);
+            managedResourceTypes.addAll(pluginResult.managedResourceTypes());
+            aggregate = aggregate.merge(pluginResult.result());
+            warnings.addAll(pluginResult.warnings());
         }
 
         graphPersistenceService.save(aggregate, context.collectedAt(), managedResourceTypes);
@@ -112,6 +129,16 @@ public class CollectorOrchestrator {
             log.warn(warning, exception);
             warnings.add(warning);
             return 0;
+        }
+    }
+
+    private PluginCollectResult collectPluginSafely(CollectorPlugin plugin, AwsCollectContext context) {
+        try {
+            return plugin.collect(context);
+        } catch (RuntimeException exception) {
+            var warning = "Plugin %s failed: %s".formatted(plugin.pluginId(), exception.getMessage());
+            log.warn(warning, exception);
+            return PluginCollectResult.warning(warning);
         }
     }
 
