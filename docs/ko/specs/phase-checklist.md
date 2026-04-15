@@ -129,7 +129,7 @@
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
 | 2-10 | IAM Role 수집기 (서비스 연결 역할) + HAS_ROLE 관계 | [x] | 2026-04-14 | EC2 instance profile / ECS task role / Lambda execution role 수집 + `iam-role` 노드 시각화 |
-| 2-11 | nginx 플러그인 구조 (enabled: false 기본) | [ ] | | |
+| 2-11 | nginx 플러그인 구조 (enabled: false 기본) | [x] | 2026-04-15 | `ariadne.plugins.nginx` 설정 바인딩 + opt-in 플러그인 스캐폴드 + warning 기반 graceful degradation |
 | 2-12 | SSM RunCommand → nginx config 수집 (find + cat) | [ ] | | |
 | 2-13 | nginx config 파싱 → upstream/server_name/proxy_pass | [ ] | | |
 | 2-14 | RUNS_NGINX, PROXIES_TO 관계 생성 | [ ] | | |
@@ -155,7 +155,7 @@
 | 2-24 | SG 시각화 UX 개선 | [ ] | | |
 | 2-25 | 리댁션 엔진 엣지 케이스 처리 | [ ] | | |
 
-**Phase 2 진행률**: 10/25 (40%)
+**Phase 2 진행률**: 11/25 (44%)
 
 ---
 

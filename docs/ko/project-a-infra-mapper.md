@@ -1,6 +1,6 @@
 # Ariadne — AWS 인프라 맵퍼 기획서
 
-> 상태: Phase 2 진행 중 (SG rule graph + CidrSource 시각화 + ECS/Lambda/EC2 연결 IAM role 수집 완료, 상세 수집/보안 하드닝 진행 중) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
+> 상태: Phase 2 진행 중 (SG rule graph + CidrSource 시각화 + ECS/Lambda/EC2 연결 IAM role 수집 + nginx 플러그인 스캐폴드 완료, 상세 수집/보안 하드닝 진행 중) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
 
 ## 이름의 유래
 
