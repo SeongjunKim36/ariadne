@@ -101,7 +101,7 @@ public class NginxPlugin implements CollectorPlugin {
         var targetInventory = buildTargetInventory(candidates);
         var resources = new ArrayList<AwsResource>();
         var relationships = new ArrayList<GraphRelationship>();
-        var warnings = new ArrayList<String>();
+        var warnings = new LinkedHashSet<String>();
 
         for (var candidate : candidates) {
             if (!managedInstances.containsKey(candidate.instanceId())) {
@@ -114,19 +114,18 @@ public class NginxPlugin implements CollectorPlugin {
                     warnings.addAll(outcome.warnings());
                 });
             } catch (RuntimeException exception) {
-                warnings.add("Plugin nginx failed for instance %s: %s"
-                        .formatted(candidate.instanceId(), exception.getMessage()));
+                warnings.add(NginxPluginGuidance.scanFailureMessage(candidate.instanceId(), exception));
             }
         }
 
         if (managedInstances.isEmpty()) {
-            warnings.add("Plugin nginx skipped: no SSM-managed EC2 instances were found.");
+            warnings.add(NginxPluginGuidance.missingManagedInstanceMessage());
         }
 
         return new PluginCollectResult(
                 Set.of("NGINX_CONFIG"),
                 new CollectResult(resources, relationships),
-                warnings
+                List.copyOf(warnings)
         );
     }
 
