@@ -7,6 +7,8 @@ import com.ariadne.graph.node.AwsResource;
 import com.ariadne.graph.node.NginxConfig;
 import com.ariadne.plugin.CollectorPlugin;
 import com.ariadne.plugin.PluginCollectResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.ec2.Ec2Client;
@@ -42,11 +44,21 @@ public class NginxPlugin implements CollectorPlugin {
     private final AriadneProperties ariadneProperties;
     private final Ec2Client ec2Client;
     private final SsmClient ssmClient;
+    private final NginxConfigParser nginxConfigParser;
+    private final ObjectMapper objectMapper;
 
-    public NginxPlugin(AriadneProperties ariadneProperties, Ec2Client ec2Client, SsmClient ssmClient) {
+    public NginxPlugin(
+            AriadneProperties ariadneProperties,
+            Ec2Client ec2Client,
+            SsmClient ssmClient,
+            NginxConfigParser nginxConfigParser,
+            ObjectMapper objectMapper
+    ) {
         this.ariadneProperties = ariadneProperties;
         this.ec2Client = ec2Client;
         this.ssmClient = ssmClient;
+        this.nginxConfigParser = nginxConfigParser;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -161,6 +173,7 @@ public class NginxPlugin implements CollectorPlugin {
         }
 
         var truncation = truncate(rawOutput);
+        var parsedConfig = nginxConfigParser.parse(truncation.content());
         return java.util.Optional.of(new NginxConfig(
                 nginxConfigArn(context, candidate.instanceId()),
                 candidate.instanceId() + ":nginx-config",
@@ -174,7 +187,12 @@ public class NginxPlugin implements CollectorPlugin {
                 candidate.instanceArn(),
                 candidate.instanceName(),
                 nginxProperties.getConfigPaths(),
+                parsedConfig.serverNames(),
+                parsedConfig.upstreamNames(),
+                parsedConfig.proxyPassTargets(),
                 truncation.content(),
+                toJson(parsedConfig.upstreams()),
+                toJson(parsedConfig.proxyPasses()),
                 rawOutput.getBytes(StandardCharsets.UTF_8).length,
                 truncation.truncated(),
                 "ssm-run-command",
@@ -346,6 +364,14 @@ public class NginxPlugin implements CollectorPlugin {
                 ? ""
                 : awsException.awsErrorDetails().errorCode();
         return errorCode != null && errorCode.toLowerCase(java.util.Locale.ROOT).contains("throttl");
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("failed to serialize nginx parse result", exception);
+        }
     }
 
     private record Ec2Candidate(

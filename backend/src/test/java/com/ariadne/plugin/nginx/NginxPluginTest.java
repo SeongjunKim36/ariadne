@@ -2,6 +2,7 @@ package com.ariadne.plugin.nginx;
 
 import com.ariadne.collector.AwsCollectContext;
 import com.ariadne.config.AriadneProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -58,7 +60,7 @@ class NginxPluginTest {
 
     @Test
     void staysQuietWhileDisabled() {
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient);
+        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
 
         assertThat(plugin.enabled()).isFalse();
         assertThat(plugin.collect(context()).warnings()).isEmpty();
@@ -98,12 +100,24 @@ class NginxPluginTest {
                         .status(CommandInvocationStatus.SUCCESS)
                         .standardOutputContent("""
                                 # ARIADNE FILE: /etc/nginx/nginx.conf
-                                user nginx;
-                                worker_processes auto;
+                                upstream backend {
+                                  server 10.0.1.10:8080;
+                                  server app.internal:8081 max_fails=3;
+                                }
+                                server {
+                                  listen 80;
+                                  server_name api.example.com api.internal _;
+                                  location / {
+                                    proxy_pass http://backend;
+                                  }
+                                  location /health {
+                                    proxy_pass http://127.0.0.1:8081/health;
+                                  }
+                                }
                                 """)
                         .build());
 
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient);
+        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
         var result = plugin.collect(context());
 
         assertThat(result.warnings()).isEmpty();
@@ -120,8 +134,23 @@ class NginxPluginTest {
                 .containsEntry("environment", "prod")
                 .containsEntry("truncated", false);
         assertThat(String.valueOf(properties.get("rawConfig")))
-                .contains("user nginx;")
-                .contains("worker_processes auto;");
+                .contains("upstream backend")
+                .contains("proxy_pass http://backend;");
+        assertThat(properties.get("serverNames")).asInstanceOf(LIST)
+                .containsExactly("api.example.com", "api.internal");
+        assertThat(properties.get("upstreamNames")).asInstanceOf(LIST)
+                .containsExactly("backend");
+        assertThat(properties.get("proxyPassTargets")).asInstanceOf(LIST)
+                .containsExactly("http://backend", "http://127.0.0.1:8081/health");
+        assertThat(String.valueOf(properties.get("upstreams")))
+                .contains("\"name\":\"backend\"")
+                .contains("\"host\":\"10.0.1.10\"")
+                .contains("\"port\":8080");
+        assertThat(String.valueOf(properties.get("proxyPasses")))
+                .contains("\"rawValue\":\"http://backend\"")
+                .contains("\"upstreamName\":\"backend\"")
+                .contains("\"host\":\"127.0.0.1\"")
+                .contains("\"path\":\"/health\"");
     }
 
     @Test
@@ -139,7 +168,7 @@ class NginxPluginTest {
                 .thenReturn(describeInstanceInformationIterable);
         when(describeInstanceInformationIterable.instanceInformationList()).thenReturn(iterableOf());
 
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient);
+        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
         var result = plugin.collect(context());
 
         assertThat(result.result().resources()).isEmpty();
