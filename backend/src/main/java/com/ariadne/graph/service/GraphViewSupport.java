@@ -9,7 +9,8 @@ import java.util.Set;
 final class GraphViewSupport {
 
     private static final Set<String> DETAIL_ONLY_RESOURCE_TYPES = Set.of(
-            "ECS_TASK_DEFINITION"
+            "ECS_TASK_DEFINITION",
+            "NGINX_CONFIG"
     );
 
     private static final Set<String> PARENT_RELATIONSHIP_TYPES = Set.of(
@@ -39,6 +40,7 @@ final class GraphViewSupport {
             case "SECURITY_GROUP" -> "sg";
             case "CIDR_SOURCE" -> "cidr";
             case "IAM_ROLE" -> "iam-role";
+            case "NGINX_CONFIG" -> "nginx-config";
             case "LOAD_BALANCER" -> "alb";
             case "ECS_CLUSTER" -> "ecs-cluster-group";
             case "ECS_SERVICE" -> "ecs-service";

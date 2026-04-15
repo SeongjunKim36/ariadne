@@ -44,6 +44,7 @@ dependencies {
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:lambda")
     implementation("software.amazon.awssdk:route53")
+    implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:iam")
     implementation("software.amazon.awssdk:sts")
 
