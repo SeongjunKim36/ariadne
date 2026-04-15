@@ -17,6 +17,8 @@ public final class RelationshipTypes {
     public static final String ALLOWS_TO = "ALLOWS_TO";
     public static final String ALLOWS_SELF = "ALLOWS_SELF";
     public static final String EGRESS_TO = "EGRESS_TO";
+    public static final String RUNS_NGINX = "RUNS_NGINX";
+    public static final String PROXIES_TO = "PROXIES_TO";
 
     private RelationshipTypes() {
     }

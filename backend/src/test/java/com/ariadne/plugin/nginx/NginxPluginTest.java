@@ -10,17 +10,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.services.ec2.Ec2Client;
-import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
 import software.amazon.awssdk.services.ec2.model.Instance;
 import software.amazon.awssdk.services.ec2.model.InstanceState;
 import software.amazon.awssdk.services.ec2.model.InstanceStateName;
 import software.amazon.awssdk.services.ec2.model.Reservation;
 import software.amazon.awssdk.services.ec2.model.Tag;
 import software.amazon.awssdk.services.ec2.paginators.DescribeInstancesIterable;
+import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.LoadBalancer;
+import software.amazon.awssdk.services.elasticloadbalancingv2.paginators.DescribeLoadBalancersIterable;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.Command;
 import software.amazon.awssdk.services.ssm.model.CommandInvocationStatus;
-import software.amazon.awssdk.services.ssm.model.DescribeInstanceInformationResponse;
 import software.amazon.awssdk.services.ssm.model.GetCommandInvocationResponse;
 import software.amazon.awssdk.services.ssm.model.InstanceInformation;
 import software.amazon.awssdk.services.ssm.model.PingStatus;
@@ -46,10 +47,16 @@ class NginxPluginTest {
     private SsmClient ssmClient;
 
     @Mock
+    private ElasticLoadBalancingV2Client elbClient;
+
+    @Mock
     private DescribeInstancesIterable describeInstancesIterable;
 
     @Mock
     private DescribeInstanceInformationIterable describeInstanceInformationIterable;
+
+    @Mock
+    private DescribeLoadBalancersIterable describeLoadBalancersIterable;
 
     private AriadneProperties properties;
 
@@ -60,7 +67,7 @@ class NginxPluginTest {
 
     @Test
     void staysQuietWhileDisabled() {
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
+        var plugin = new NginxPlugin(properties, ec2Client, elbClient, ssmClient, new NginxConfigParser(), new ObjectMapper());
 
         assertThat(plugin.enabled()).isFalse();
         assertThat(plugin.collect(context()).warnings()).isEmpty();
@@ -71,16 +78,37 @@ class NginxPluginTest {
         properties.getPlugins().getNginx().setEnabled(true);
         properties.getPlugins().getNginx().setConfigPaths(List.of("/etc/nginx/nginx.conf", "/srv/nginx/conf.d"));
 
-        var instance = Instance.builder()
+        var sourceInstance = Instance.builder()
                 .instanceId("i-1234")
+                .privateIpAddress("10.0.0.10")
                 .state(InstanceState.builder().name(InstanceStateName.RUNNING).build())
                 .tags(
                         Tag.builder().key("Name").value("prod-web-1").build(),
                         Tag.builder().key("environment").value("prod").build()
                 )
                 .build();
+        var backendInstance = Instance.builder()
+                .instanceId("i-5678")
+                .privateIpAddress("10.0.1.10")
+                .state(InstanceState.builder().name(InstanceStateName.RUNNING).build())
+                .tags(
+                        Tag.builder().key("Name").value("app.internal").build(),
+                        Tag.builder().key("environment").value("prod").build()
+                )
+                .build();
         when(ec2Client.describeInstancesPaginator()).thenReturn(describeInstancesIterable);
-        when(describeInstancesIterable.reservations()).thenReturn(iterableOf(Reservation.builder().instances(instance).build()));
+        when(describeInstancesIterable.reservations()).thenReturn(iterableOf(
+                Reservation.builder().instances(sourceInstance, backendInstance).build()
+        ));
+
+        when(elbClient.describeLoadBalancersPaginator()).thenReturn(describeLoadBalancersIterable);
+        when(describeLoadBalancersIterable.loadBalancers()).thenReturn(iterableOf(
+                LoadBalancer.builder()
+                        .loadBalancerArn("arn:aws:elasticloadbalancing:ap-northeast-2:123456789012:loadbalancer/app/internal-alb/50dc6c495c0c9188")
+                        .loadBalancerName("internal-alb")
+                        .dnsName("internal-alb-123.ap-northeast-2.elb.amazonaws.com")
+                        .build()
+        ));
 
         when(ssmClient.describeInstanceInformationPaginator(any(software.amazon.awssdk.services.ssm.model.DescribeInstanceInformationRequest.class)))
                 .thenReturn(describeInstanceInformationIterable);
@@ -113,16 +141,20 @@ class NginxPluginTest {
                                   location /health {
                                     proxy_pass http://127.0.0.1:8081/health;
                                   }
+                                  location /alb {
+                                    proxy_pass http://internal-alb-123.ap-northeast-2.elb.amazonaws.com;
+                                  }
                                 }
                                 """)
                         .build());
 
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
+        var plugin = new NginxPlugin(properties, ec2Client, elbClient, ssmClient, new NginxConfigParser(), new ObjectMapper());
         var result = plugin.collect(context());
 
         assertThat(result.warnings()).isEmpty();
         assertThat(result.managedResourceTypes()).containsExactly("NGINX_CONFIG");
         assertThat(result.result().resources()).hasSize(1);
+        assertThat(result.result().relationships()).hasSize(4);
 
         var properties = result.result().resources().get(0).toProperties();
         assertThat(properties)
@@ -141,7 +173,11 @@ class NginxPluginTest {
         assertThat(properties.get("upstreamNames")).asInstanceOf(LIST)
                 .containsExactly("backend");
         assertThat(properties.get("proxyPassTargets")).asInstanceOf(LIST)
-                .containsExactly("http://backend", "http://127.0.0.1:8081/health");
+                .containsExactly(
+                        "http://backend",
+                        "http://127.0.0.1:8081/health",
+                        "http://internal-alb-123.ap-northeast-2.elb.amazonaws.com"
+                );
         assertThat(String.valueOf(properties.get("upstreams")))
                 .contains("\"name\":\"backend\"")
                 .contains("\"host\":\"10.0.1.10\"")
@@ -151,6 +187,39 @@ class NginxPluginTest {
                 .contains("\"upstreamName\":\"backend\"")
                 .contains("\"host\":\"127.0.0.1\"")
                 .contains("\"path\":\"/health\"");
+
+        assertThat(result.result().relationships())
+                .extracting(relationship -> relationship.type(), relationship -> relationship.sourceArn(), relationship -> relationship.targetArn())
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "RUNS_NGINX",
+                                "arn:aws:ec2:ap-northeast-2:123456789012:instance/i-1234",
+                                "arn:aws:ariadne:ap-northeast-2:123456789012:nginx-config/i-1234"
+                        ),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "PROXIES_TO",
+                                "arn:aws:ariadne:ap-northeast-2:123456789012:nginx-config/i-1234",
+                                "arn:aws:ec2:ap-northeast-2:123456789012:instance/i-5678"
+                        ),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "PROXIES_TO",
+                                "arn:aws:ariadne:ap-northeast-2:123456789012:nginx-config/i-1234",
+                                "arn:aws:ec2:ap-northeast-2:123456789012:instance/i-1234"
+                        ),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "PROXIES_TO",
+                                "arn:aws:ariadne:ap-northeast-2:123456789012:nginx-config/i-1234",
+                                "arn:aws:elasticloadbalancing:ap-northeast-2:123456789012:loadbalancer/app/internal-alb/50dc6c495c0c9188"
+                        )
+                );
+
+        assertThat(result.result().relationships().stream()
+                .filter(relationship -> "RUNS_NGINX".equals(relationship.type()))
+                .findFirst()
+                .orElseThrow()
+                .properties())
+                .containsEntry("serverName", "api.example.com")
+                .containsEntry("serverNames", List.of("api.example.com", "api.internal"));
     }
 
     @Test
@@ -163,12 +232,14 @@ class NginxPluginTest {
                 .build();
         when(ec2Client.describeInstancesPaginator()).thenReturn(describeInstancesIterable);
         when(describeInstancesIterable.reservations()).thenReturn(iterableOf(Reservation.builder().instances(instance).build()));
+        when(elbClient.describeLoadBalancersPaginator()).thenReturn(describeLoadBalancersIterable);
+        when(describeLoadBalancersIterable.loadBalancers()).thenReturn(iterableOf());
 
         when(ssmClient.describeInstanceInformationPaginator(any(software.amazon.awssdk.services.ssm.model.DescribeInstanceInformationRequest.class)))
                 .thenReturn(describeInstanceInformationIterable);
         when(describeInstanceInformationIterable.instanceInformationList()).thenReturn(iterableOf());
 
-        var plugin = new NginxPlugin(properties, ec2Client, ssmClient, new NginxConfigParser(), new ObjectMapper());
+        var plugin = new NginxPlugin(properties, ec2Client, elbClient, ssmClient, new NginxConfigParser(), new ObjectMapper());
         var result = plugin.collect(context());
 
         assertThat(result.result().resources()).isEmpty();
