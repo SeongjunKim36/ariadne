@@ -4,6 +4,8 @@ import com.ariadne.config.AwsProperties;
 import com.ariadne.graph.node.Vpc;
 import com.ariadne.graph.service.GraphInferenceService;
 import com.ariadne.graph.service.GraphPersistenceService;
+import com.ariadne.plugin.CollectorPlugin;
+import com.ariadne.plugin.PluginCollectResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -86,6 +88,7 @@ class CollectorOrchestratorTest {
 
         var orchestrator = new CollectorOrchestrator(
                 List.of(failingCollector, successfulCollector),
+                List.of(),
                 graphPersistenceService,
                 graphInferenceService,
                 stsClient,
@@ -106,5 +109,48 @@ class CollectorOrchestratorTest {
         assertThat(summary.warnings()).singleElement().asString().contains("Collector RDS failed");
         assertThat(managedTypesCaptor.getValue()).containsExactly("VPC");
         assertThat(collectedAtCaptor.getValue()).isEqualTo(summary.collectedAt());
+    }
+
+    @Test
+    void addsWarningsFromEnabledPluginsWithoutFailingTheScan() {
+        CollectorPlugin nginxPlugin = new CollectorPlugin() {
+            @Override
+            public String pluginId() {
+                return "nginx";
+            }
+
+            @Override
+            public boolean enabled() {
+                return true;
+            }
+
+            @Override
+            public PluginCollectResult collect(AwsCollectContext context) {
+                return PluginCollectResult.warning("Plugin nginx is enabled, but SSM collection is not implemented yet.");
+            }
+        };
+
+        var orchestrator = new CollectorOrchestrator(
+                List.of(),
+                List.of(nginxPlugin),
+                graphPersistenceService,
+                graphInferenceService,
+                stsClient,
+                new AwsProperties("ap-northeast-2", null, null, null)
+        );
+
+        when(stsClient.getCallerIdentity()).thenReturn(GetCallerIdentityResponse.builder()
+                .account("123456789012")
+                .build());
+        when(graphInferenceService.refreshLikelyUsesRelationships()).thenReturn(0);
+
+        var summary = orchestrator.collectAll();
+
+        verify(graphPersistenceService).save(resultCaptor.capture(), collectedAtCaptor.capture(), managedTypesCaptor.capture());
+        assertThat(resultCaptor.getValue().resources()).isEmpty();
+        assertThat(summary.totalResources()).isZero();
+        assertThat(summary.totalRelationships()).isZero();
+        assertThat(summary.warnings()).containsExactly("Plugin nginx is enabled, but SSM collection is not implemented yet.");
+        assertThat(managedTypesCaptor.getValue()).isEmpty();
     }
 }
