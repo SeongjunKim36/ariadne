@@ -140,7 +140,7 @@
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
 | 2-16 | LlmGateway 강제 인터셉터 (sanitize 우회 차단) | [x] | 2026-04-15 | `ClaudeClient` package-private + `LlmGateway` 단일 진입점 + sanitize 강제 테스트 추가 |
-| 2-17 | LlmDataSanitizer (strict/normal/verbose) | [ ] | | |
+| 2-17 | LlmDataSanitizer (strict/normal/verbose) | [x] | 2026-04-15 | strict는 식별자 alias/구조 유지, normal은 tags/env 제거, verbose는 tags 유지 + env redaction 적용 |
 | 2-18 | field allowlist 적용 | [ ] | | |
 | 2-19 | fail-closed 동작 (레벨 미설정 시 STRICT) | [x] | 2026-04-15 | transmission level 누락/오타 시 `STRICT` 강제, 단위 테스트로 검증 |
 | 2-20 | 감사 로그 테이블 (llm_audit_log) + API | [ ] | | |
@@ -155,7 +155,7 @@
 | 2-24 | SG 시각화 UX 개선 | [ ] | | |
 | 2-25 | 리댁션 엔진 엣지 케이스 처리 | [ ] | | |
 
-**Phase 2 진행률**: 17/25 (68%)
+**Phase 2 진행률**: 18/25 (72%)
 
 ---
 
