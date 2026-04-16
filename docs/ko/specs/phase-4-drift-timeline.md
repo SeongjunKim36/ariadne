@@ -3,6 +3,7 @@
 > 상위 문서: [project-a-infra-mapper.md](../project-a-infra-mapper.md)
 > 선행 조건: Phase 3 완료 (AI 의미층)
 > 예상 기간: 3-4주
+> 구현 상태: **완료 (2026-04-16)** — 스냅샷/디프 저장, 타임라인 UI, Terraform 드리프트, EventBridge 보강, Slack 알림, 커스텀 기간 선택 반영
 
 ---
 
@@ -12,12 +13,12 @@
 
 ### 종료 조건
 
-- [ ] 매시간 스냅샷이 PostgreSQL에 저장됨
-- [ ] 두 스냅샷 간 diff를 API + UI로 조회 가능
-- [ ] Terraform state vs 실제 AWS 비교 → 드리프트 목록 출력
-- [ ] EventBridge 기반 준실시간 변경 보강 동작 (선택적)
-- [ ] 중요 변경 Slack 알림 동작
-- [ ] 5대 질문 #5("어제 대비 오늘 뭐가 바뀌었어?") 에 답 가능
+- [x] 매시간 스냅샷이 PostgreSQL에 저장됨
+- [x] 두 스냅샷 간 diff를 API + UI로 조회 가능
+- [x] Terraform state vs 실제 AWS 비교 → 드리프트 목록 출력
+- [x] EventBridge 기반 준실시간 변경 보강 동작 (선택적)
+- [x] 중요 변경 Slack 알림 동작
+- [x] 5대 질문 #5("어제 대비 오늘 뭐가 바뀌었어?") 에 답 가능
 
 ---
 

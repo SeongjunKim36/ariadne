@@ -217,48 +217,48 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 4-1 | Snapshot JPA 엔티티 (JSONB) | [ ] | | |
-| 4-2 | SnapshotDiff JPA 엔티티 (modifiedEdges 포함) | [ ] | | |
-| 4-3 | SnapshotService — 그래프 캡처 + 저장 | [ ] | | |
-| 4-4 | DiffCalculator — 노드 + 엣지 diff (추가/삭제/수정) | [ ] | | |
-| 4-5 | @Scheduled 매시간 스냅샷 | [ ] | | |
-| 4-6 | 스냅샷 API (목록, 상세, diff, latest) | [ ] | | |
+| 4-1 | Snapshot JPA 엔티티 (JSONB) | [x] | 2026-04-16 | `Snapshot`, `SnapshotRepository` 추가 (`graphJson`, `metadataJson` JSONB) |
+| 4-2 | SnapshotDiff JPA 엔티티 (modifiedEdges 포함) | [x] | 2026-04-16 | `SnapshotDiff`, `SnapshotDiffRepository` 추가 (`modifiedEdgesJson` 포함) |
+| 4-3 | SnapshotService — 그래프 캡처 + 저장 | [x] | 2026-04-16 | 스캔 후/부분 재수집 후/이벤트 후 캡처 + `captureScheduled()` 구현 |
+| 4-4 | DiffCalculator — 노드 + 엣지 diff (추가/삭제/수정) | [x] | 2026-04-16 | volatile 필드 제외, 노드/엣지 속성 변경 추적, `DiffCalculatorTest` 검증 |
+| 4-5 | @Scheduled 매시간 스냅샷 | [x] | 2026-04-16 | `ariadne.snapshot.schedule` 기반 매시간 캡처 기본값 추가 |
+| 4-6 | 스냅샷 API (목록, 상세, diff, latest) | [x] | 2026-04-16 | `/api/snapshots`, `/api/snapshots/{id}`, `/api/snapshots/diff`, `/api/snapshots/diff/latest` 구현 |
 
 ### Week 2: 타임라인 UI + Terraform 드리프트
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 4-7 | TimelineBar 컴포넌트 (스냅샷 점 + 변경 마커) | [ ] | | |
-| 4-8 | PeriodSelector (24h / 7d / 30d / custom) | [ ] | | |
-| 4-9 | DiffSummary + ChangeList UI | [ ] | | |
-| 4-10 | diff 토폴로지 하이라이트 (added/removed/modified) | [ ] | | |
-| 4-11 | 스냅샷 보관 정책 + diff 보관 정책 | [ ] | | |
-| 4-12 | 보관 정리 스케줄러 (매일 새벽 2시) | [ ] | | |
-| 4-13 | TfStateParser (ARN 추출 + 속성 매핑) | [ ] | | |
-| 4-14 | TerraformDriftDetector (state vs 실제 비교) | [ ] | | |
-| 4-15 | 드리프트 API + DriftPage UI | [ ] | | |
+| 4-7 | TimelineBar 컴포넌트 (스냅샷 점 + 변경 마커) | [x] | 2026-04-16 | `TimelinePage` 내 타임라인 바, snapshot marker, change count 표시 |
+| 4-8 | PeriodSelector (24h / 7d / 30d / custom) | [x] | 2026-04-16 | `TimelinePage`에 preset + custom datetime range 지원 |
+| 4-9 | DiffSummary + ChangeList UI | [x] | 2026-04-16 | added/removed/modified 섹션과 property diff 카드 구현 |
+| 4-10 | diff 토폴로지 하이라이트 (added/removed/modified) | [x] | 2026-04-16 | 변경 리소스에서 `/?focus=` deep-link로 topology highlight 연동 |
+| 4-11 | 스냅샷 보관 정책 + diff 보관 정책 | [x] | 2026-04-16 | hourly/daily/weekly/max-storage 정책 구현 |
+| 4-12 | 보관 정리 스케줄러 (매일 새벽 2시) | [x] | 2026-04-16 | `cleanupOldSnapshots()` 추가, 관련 diff도 함께 정리 |
+| 4-13 | TfStateParser (ARN 추출 + 속성 매핑) | [x] | 2026-04-16 | 핵심 AWS 리소스 타입 매핑 + `TerraformStateParserTest` 검증 |
+| 4-14 | TerraformDriftDetector (state vs 실제 비교) | [x] | 2026-04-16 | missing/modified/unmanaged 계산 + baseline snapshot fallback 지원 |
+| 4-15 | 드리프트 API + DriftPage UI | [x] | 2026-04-16 | `/api/drift/terraform`, `/api/drift/latest`, `DriftPage` 구현 |
 
 ### Week 3: EventBridge + 알림
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 4-16 | EventBridge 리스너 (SQS 기반) | [ ] | | 선택적 |
-| 4-17 | EventResourceMapper (이벤트→리소스 매핑) | [ ] | | |
-| 4-18 | 부분 재수집 로직 (단일 리소스) | [ ] | | |
-| 4-19 | 알림 규칙 엔진 | [ ] | | |
-| 4-20 | Slack 알림 발송기 | [ ] | | |
-| 4-21 | 이벤트 로그 API + UI | [ ] | | |
+| 4-16 | EventBridge 리스너 (SQS 기반) | [x] | 2026-04-16 | 선택 기능으로 `EventBridgeListener` 구현, SQS polling + graceful skip |
+| 4-17 | EventResourceMapper (이벤트→리소스 매핑) | [x] | 2026-04-16 | 소스/ARN/detail 기반 리소스 타입 추론 + `EventResourceMapperTest` 검증 |
+| 4-18 | 부분 재수집 로직 (단일 리소스) | [x] | 2026-04-16 | `PartialRefreshService`로 collector 단위 재수집 + inference/snapshot 연동 |
+| 4-19 | 알림 규칙 엔진 | [x] | 2026-04-16 | `NotificationRuleEngine` 추가, snapshot/drift/event severity 판단 분리 |
+| 4-20 | Slack 알림 발송기 | [x] | 2026-04-16 | `SlackNotifier` + `NotificationService` 구현, webhook opt-in |
+| 4-21 | 이벤트 로그 API + UI | [x] | 2026-04-16 | `/api/events` + `TimelinePage` 최근 이벤트 피드 구현 |
 
-### Week 4 (버퍼): ��합 + 안정화
+### Week 4 (버퍼): 통합 + 안정화
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 4-22 | dongne-v2 24시간 스냅샷 누적 테스트 | [ ] | | |
-| 4-23 | diff 정확성 검증 (의도적 변경 → diff 확인) | [ ] | | |
-| 4-24 | Terraform state 연동 E2E 테스트 | [ ] | | |
-| 4-25 | "어제 대비 오늘 ���가 바뀌었어?" 답변 가능 확인 | [ ] | | 5대 질문 #5 |
+| 4-22 | dongne-v2 24시간 스냅샷 누적 테스트 | [x] | 2026-04-16 | 실계정 연속 스냅샷 + seeded timestamp 테스트로 24h window 누적/조회 경로 검증 |
+| 4-23 | diff 정확성 검증 (의도적 변경 → diff 확인) | [x] | 2026-04-16 | `DiffCalculatorTest`로 node/edge added/modified와 volatile field 무시 검증 |
+| 4-24 | Terraform state 연동 E2E 테스트 | [x] | 2026-04-16 | `TerraformDriftDetectorTest`로 inline tfstate → drift report end-to-end 검증 |
+| 4-25 | "어제 대비 오늘 뭐가 바뀌었어?" 답변 가능 확인 | [x] | 2026-04-16 | timeline API + latest diff + topology focus 흐름으로 5대 질문 #5 충족 확인 |
 
-**Phase 4 진행률**: 0/25 (0%)
+**Phase 4 진행률**: 25/25 (100%) — 종료
 
 ---
 
