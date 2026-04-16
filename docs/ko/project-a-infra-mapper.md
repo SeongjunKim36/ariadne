@@ -1,6 +1,6 @@
 # Ariadne — AWS 인프라 맵퍼 기획서
 
-> 상태: Phase 3 완료 (감사 엔진 + NL Query + Tier 레이블링 + 감사 설명 + 아키텍처 요약 완료) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
+> 상태: Phase 4 완료 (스냅샷 타임라인 + Terraform 드리프트 + EventBridge 보강 + Slack 알림 완료) · 최초 작성: 2026-04-10 · **타당성 검증 완료: 2026-04-13** · 관련 문서: [Theseus - 코드 토폴로지 맵퍼](./project-b-code-mapper.md)
 
 ## 이름의 유래
 

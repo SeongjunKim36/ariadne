@@ -193,95 +193,129 @@ interface ArchitectureSummaryResponse {
 
 | Method | Path | 설명 | 쿼리 파라미터 | 응답 |
 |---|---|---|---|---|
-| GET | `/api/snapshots` | 스냅샷 목록 | `period` (24h/7d/30d), `page`, `size` | `Page<SnapshotSummary>` |
-| GET | `/api/snapshots/{id}` | 스냅샷 상세 | — | `Snapshot` |
-| GET | `/api/snapshots/diff` | 두 스냅샷 비교 | `from`, `to` | `SnapshotDiff` |
-| GET | `/api/snapshots/diff/latest` | 최근 diff | — | `SnapshotDiff` |
+| GET | `/api/snapshots` | 스냅샷 목록 | `period` (24h/7d/30d), `from`, `to`, `page`, `size` | `SnapshotSummary[]` |
+| GET | `/api/snapshots/{id}` | 스냅샷 상세 + 그래프 payload | — | `SnapshotResponse` |
+| GET | `/api/snapshots/diff` | 두 스냅샷 비교 | `from`, `to` | `SnapshotDiffResponse` |
+| GET | `/api/snapshots/diff/latest` | 가장 최근 diff | — | `204 No Content` 또는 `SnapshotDiffResponse` |
 
 ### 타임라인
 
 | Method | Path | 설명 | 쿼리 파라미터 | 응답 |
 |---|---|---|---|---|
-| GET | `/api/timeline` | 변경 타임라인 | `from`, `to` | `TimelineEntry[]` |
+| GET | `/api/timeline` | 변경 타임라인 | `period` (24h/7d/30d), `from`, `to` | `TimelineEntryResponse[]` |
 
 ### Terraform 드리프트
 
 | Method | Path | 설명 | 요청 | 응답 |
 |---|---|---|---|---|
-| POST | `/api/drift/terraform` | 드리프트 감지 실행 | — | `DriftReport` |
-| GET | `/api/drift/latest` | 최근 드리프트 보고서 | — | `DriftReport` |
+| POST | `/api/drift/terraform` | 드리프트 감지 실행 | `{ path?: string, rawStateJson?: string }` | `DriftReportResponse` |
+| GET | `/api/drift/latest` | 최근 드리프트 보고서 | — | `204 No Content` 또는 `DriftReportResponse` |
 
 ### EventBridge 이벤트
 
 | Method | Path | 설명 | 쿼리 파라미터 | 응답 |
 |---|---|---|---|---|
-| GET | `/api/events` | 이벤트 로그 | `from`, `to`, `type`, `page` | `Page<EventLog>` |
-
-### 알림
-
-| Method | Path | 설명 | 요청 | 응답 |
-|---|---|---|---|---|
-| GET | `/api/notifications` | 발송된 알림 목록 | `page`, `size` | `Page<Notification>` |
-| POST | `/api/notifications/test` | 테스트 알림 발송 | — | `{ sent: boolean }` |
+| GET | `/api/events` | 최근 EventBridge 이벤트 로그 | `from`, `to` | `EventLogResponse[]` |
 
 ### 응답 타입
 
 ```typescript
 interface SnapshotDiff {
-  baseSnapshot: { id: number; capturedAt: string };
-  targetSnapshot: { id: number; capturedAt: string };
-  summary: { added: number; removed: number; modified: number; totalChanges: number };
-  changes: DiffChange[];
+  id: number;
+  diffedAt: string;
+  baseSnapshot: SnapshotSummary;
+  targetSnapshot: SnapshotSummary;
+  totalChanges: number;
+  addedCount: number;
+  removedCount: number;
+  modifiedCount: number;
+  addedNodes: NodeDiff[];
+  removedNodes: NodeDiff[];
+  modifiedNodes: NodeDiff[];
+  addedEdges: EdgeDiff[];
+  removedEdges: EdgeDiff[];
+  modifiedEdges: EdgeDiff[];
 }
 
-interface DiffChange {
+interface NodeDiff {
   type: "ADDED" | "REMOVED" | "MODIFIED";
-  arn: string;
-  resourceName: string;
-  resourceType: string;
-  changes?: Record<string, { old: any; new: any }>;  // MODIFIED만
+  arn: string | null;
+  name: string | null;
+  resourceType: string | null;
+  propertyChanges: Record<string, { beforeValue: any; afterValue: any }>;
+}
+
+interface EdgeDiff {
+  edgeId: string;
+  sourceArn: string;
+  targetArn: string;
+  relationshipType: string;
+  changeType: "ADDED" | "REMOVED" | "MODIFIED";
+  propertyChanges: Record<string, { beforeValue: any; afterValue: any }>;
 }
 
 interface DriftReport {
-  runAt: string;
+  id: number;
+  generatedAt: string;
+  sourceKind: string;
+  sourceName: string;
+  totalItems: number;
+  missingCount: number;
+  modifiedCount: number;
+  unmanagedCount: number;
   items: DriftItem[];
-  summary: { missing: number; modified: number; unmanaged: number };
 }
 
 interface DriftItem {
-  type: "MISSING" | "MODIFIED" | "UNMANAGED";
-  arn: string;
-  resourceName: string;
-  resourceType: string;
-  terraformModule?: string;
-  changes?: Record<string, { tfValue: any; actualValue: any }>;
+  status: "MISSING" | "MODIFIED" | "UNMANAGED";
+  terraformAddress?: string | null;
+  arn: string | null;
+  resourceId: string | null;
+  name: string | null;
+  resourceType: string | null;
+  summary: string;
+  desiredData: Record<string, any>;
+  actualData: Record<string, any>;
+  propertyChanges: Record<string, { beforeValue: any; afterValue: any }>;
 }
 
 interface SnapshotSummary {
   id: number;
   capturedAt: string;
+  accountId: string;
+  region: string;
   nodeCount: number;
   edgeCount: number;
   scanDurationMs: number;
-  hasChanges: boolean;         // 이전 스냅샷 대비 변경 있는지
-  changeSeverity?: "HIGH" | "MEDIUM" | "LOW" | null;  // 변경 중요도 (타임라인 마커 색상)
+  triggerSource: string;
+  scanId?: string | null;
 }
 
 interface TimelineEntry {
   snapshotId: number;
   capturedAt: string;
-  summary: { added: number; removed: number; modified: number };
-  highlights: string[];        // 주요 변경 요약 ("prod-api-sg 인바운드 규칙 추가" 등)
+  baseSnapshotId: number | null;
+  totalChanges: number;
+  addedCount: number;
+  removedCount: number;
+  modifiedCount: number;
+  triggerSource: string;
+  nodeCount: number;
+  edgeCount: number;
 }
 
 interface EventLog {
   id: number;
-  eventName: string;
-  resourceType: string;
-  resourceId: string;
-  timestamp: string;
-  source: string;              // "ec2.amazonaws.com" 등
-  processed: boolean;
+  receivedAt: string;
+  eventTime: string | null;
+  eventId: string | null;
+  source: string;
+  detailType: string;
+  resourceArn: string | null;
+  resourceType: string | null;
+  action: string | null;
+  status: string;
+  message: string | null;
 }
 ```
 
@@ -294,5 +328,5 @@ interface EventLog {
 | 1 | 7 | 스캔(3) + 그래프(4) |
 | 2 | 2 | 감사 로그(2) |
 | 3 | 9 | 감사(5) + 질의(2) + 레이블(3) + 요약(1) — 감사 2개는 Phase 2와 겹침 |
-| 4 | 9 | 스냅샷(4) + 타임라인(1) + 드리프트(2) + 이벤트(1) + 알림(2) |
-| **총** | **27** | |
+| 4 | 8 | 스냅샷(4) + 타임라인(1) + 드리프트(2) + 이벤트(1) |
+| **총** | **26** | |
