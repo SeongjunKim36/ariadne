@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.OffsetDateTime;
 
@@ -27,21 +28,27 @@ public class SnapshotDiff {
     private OffsetDateTime diffedAt;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String addedNodesJson;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String removedNodesJson;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String modifiedNodesJson;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String addedEdgesJson;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String removedEdgesJson;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String modifiedEdgesJson;
 
     @Column(nullable = false)

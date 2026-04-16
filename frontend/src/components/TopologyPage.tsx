@@ -220,7 +220,6 @@ function DetailPanel({
 }
 
 export function TopologyPage() {
-  const nodeTypes = useMemo(() => topologyNodeTypes, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: graph, error, isLoading, mutate } = useSWR('graph', fetchGraph, {
     shouldRetryOnError: false,
@@ -270,6 +269,7 @@ export function TopologyPage() {
     () => (relatedFromUrl ? relatedFromUrl.split(',').map((entry) => entry.trim()).filter(Boolean) : []),
     [relatedFromUrl],
   );
+  const nodeTypes = useMemo(() => topologyNodeTypes, []);
 
   useEffect(() => {
     if (latestScan?.status === 'RUNNING') {
@@ -756,6 +756,7 @@ export function TopologyPage() {
                   edges={flow.edges}
                   nodeTypes={nodeTypes}
                   fitView
+                  onlyRenderVisibleElements
                   nodesDraggable={false}
                   nodesConnectable={false}
                   onNodeClick={onNodeClick}

@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.OffsetDateTime;
 
@@ -50,6 +51,7 @@ public class EventLog {
     private String message;
 
     @Column(columnDefinition = "jsonb", nullable = false)
+    @ColumnTransformer(write = "?::jsonb")
     private String rawEventJson;
 
     protected EventLog() {
