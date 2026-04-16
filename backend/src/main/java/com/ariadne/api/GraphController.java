@@ -26,9 +26,10 @@ public class GraphController {
     public GraphResponse getGraph(
             @RequestParam(required = false) String env,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String vpc
+            @RequestParam(required = false) String vpc,
+            @RequestParam(required = false) String tier
     ) {
-        return graphQueryService.fetchGraph(env, parseTypes(type), vpc);
+        return graphQueryService.fetchGraph(env, parseTypes(type), vpc, tier);
     }
 
     private Set<String> parseTypes(String type) {

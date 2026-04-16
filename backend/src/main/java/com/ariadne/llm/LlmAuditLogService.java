@@ -12,6 +12,9 @@ import java.util.Locale;
 @Service
 public class LlmAuditLogService {
 
+    private static final int MAX_QUERY_TEXT_LENGTH = 1900;
+    private static final int MAX_FAILURE_MESSAGE_LENGTH = 1900;
+
     private final LlmAuditLogRepository repository;
 
     public LlmAuditLogService(LlmAuditLogRepository repository) {
@@ -92,13 +95,20 @@ public class LlmAuditLogService {
     }
 
     private String normalizePrompt(String prompt) {
-        return prompt == null ? "" : prompt;
+        return abbreviate(prompt == null ? "" : prompt, MAX_QUERY_TEXT_LENGTH);
     }
 
     private String failureMessage(Throwable throwable) {
         if (throwable == null || throwable.getMessage() == null || throwable.getMessage().isBlank()) {
             return "LLM request failed";
         }
-        return throwable.getMessage();
+        return abbreviate(throwable.getMessage(), MAX_FAILURE_MESSAGE_LENGTH);
+    }
+
+    private String abbreviate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength - 3) + "...";
     }
 }

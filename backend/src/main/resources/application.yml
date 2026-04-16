@@ -30,7 +30,16 @@ ariadne:
   scan:
     schedule: "0 0 * * * *"  # every hour
   llm:
+    api-key: ${CLAUDE_API_KEY:}
+    default-model: claude-sonnet-4-6-20250514
+    complex-model: claude-opus-4-6-20250610
     transmission-level: strict
+    max-input-tokens: 8000
+    max-output-tokens: 4096
+    daily-budget-usd: 5.0
+    timeout-seconds: 30
+    retry-max-attempts: 2
+    retry-backoff-seconds: 2
   plugins:
     nginx:
       enabled: false

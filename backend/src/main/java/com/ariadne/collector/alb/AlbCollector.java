@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeSet;
 
 @Component
 public class AlbCollector extends BaseCollector {
@@ -44,7 +45,7 @@ public class AlbCollector extends BaseCollector {
             var loadBalancerArn = loadBalancer.loadBalancerArn();
             var tags = fetchTags(loadBalancerArn);
             var targetGroups = targetGroups(loadBalancerArn);
-            var listenerCount = listenerCount(loadBalancerArn);
+            var listenerSummary = listenerSummary(loadBalancerArn);
 
             resources.add(new LoadBalancer(
                     loadBalancerArn,
@@ -59,8 +60,10 @@ public class AlbCollector extends BaseCollector {
                     loadBalancer.schemeAsString(),
                     loadBalancer.dnsName(),
                     loadBalancer.state() == null ? null : loadBalancer.state().codeAsString(),
-                    listenerCount,
-                    targetGroups.size()
+                    listenerSummary.count(),
+                    targetGroups.size(),
+                    listenerSummary.ports(),
+                    listenerSummary.protocols()
             ));
 
             if (hasText(loadBalancer.vpcId())) {
@@ -108,15 +111,23 @@ public class AlbCollector extends BaseCollector {
         return targetGroups;
     }
 
-    private int listenerCount(String loadBalancerArn) {
+    private ListenerSummary listenerSummary(String loadBalancerArn) {
         var paginator = withRetry(() -> elbClient.describeListenersPaginator(DescribeListenersRequest.builder()
                 .loadBalancerArn(loadBalancerArn)
                 .build()));
         int count = 0;
-        for (var ignored : paginator.listeners()) {
+        var ports = new TreeSet<Integer>();
+        var protocols = new java.util.LinkedHashSet<String>();
+        for (var listener : paginator.listeners()) {
             count++;
+            if (listener.port() != null) {
+                ports.add(listener.port());
+            }
+            if (hasText(listener.protocolAsString())) {
+                protocols.add(listener.protocolAsString());
+            }
         }
-        return count;
+        return new ListenerSummary(count, List.copyOf(ports), List.copyOf(protocols));
     }
 
     private void collectInstanceRoutes(
@@ -187,5 +198,8 @@ public class AlbCollector extends BaseCollector {
             properties.put("protocol", protocol);
         }
         return properties.isEmpty() ? Map.of() : Map.copyOf(properties);
+    }
+
+    private record ListenerSummary(int count, List<Integer> ports, List<String> protocols) {
     }
 }

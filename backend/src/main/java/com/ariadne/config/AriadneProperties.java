@@ -51,9 +51,48 @@ public class AriadneProperties {
 
     public static class Llm {
 
+        private String apiKey;
+        private String defaultModel = "claude-sonnet-4-6-20250514";
+        private String complexModel = "claude-opus-4-6-20250610";
         private String transmissionLevel;
+        private int maxInputTokens = 8000;
+        private int maxOutputTokens = 4096;
+        private double dailyBudgetUsd = 5.0;
+        private int timeoutSeconds = 30;
+        private int retryMaxAttempts = 2;
+        private int retryBackoffSeconds = 2;
         private List<String> allowedFields = new ArrayList<>(defaultAllowedFields());
         private List<String> verboseAdditionalFields = new ArrayList<>(defaultVerboseAdditionalFields());
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey == null || apiKey.isBlank() ? null : apiKey.trim();
+        }
+
+        public String getDefaultModel() {
+            return defaultModel;
+        }
+
+        public void setDefaultModel(String defaultModel) {
+            if (defaultModel == null || defaultModel.isBlank()) {
+                return;
+            }
+            this.defaultModel = defaultModel.trim();
+        }
+
+        public String getComplexModel() {
+            return complexModel;
+        }
+
+        public void setComplexModel(String complexModel) {
+            if (complexModel == null || complexModel.isBlank()) {
+                return;
+            }
+            this.complexModel = complexModel.trim();
+        }
 
         public String getTransmissionLevel() {
             return transmissionLevel;
@@ -66,6 +105,72 @@ public class AriadneProperties {
             }
             var normalized = transmissionLevel.trim();
             this.transmissionLevel = normalized.isEmpty() ? null : normalized;
+        }
+
+        public int getMaxInputTokens() {
+            return maxInputTokens;
+        }
+
+        public void setMaxInputTokens(int maxInputTokens) {
+            if (maxInputTokens <= 0) {
+                return;
+            }
+            this.maxInputTokens = maxInputTokens;
+        }
+
+        public int getMaxOutputTokens() {
+            return maxOutputTokens;
+        }
+
+        public void setMaxOutputTokens(int maxOutputTokens) {
+            if (maxOutputTokens <= 0) {
+                return;
+            }
+            this.maxOutputTokens = maxOutputTokens;
+        }
+
+        public double getDailyBudgetUsd() {
+            return dailyBudgetUsd;
+        }
+
+        public void setDailyBudgetUsd(double dailyBudgetUsd) {
+            if (dailyBudgetUsd <= 0) {
+                return;
+            }
+            this.dailyBudgetUsd = dailyBudgetUsd;
+        }
+
+        public int getTimeoutSeconds() {
+            return timeoutSeconds;
+        }
+
+        public void setTimeoutSeconds(int timeoutSeconds) {
+            if (timeoutSeconds <= 0) {
+                return;
+            }
+            this.timeoutSeconds = timeoutSeconds;
+        }
+
+        public int getRetryMaxAttempts() {
+            return retryMaxAttempts;
+        }
+
+        public void setRetryMaxAttempts(int retryMaxAttempts) {
+            if (retryMaxAttempts < 0) {
+                return;
+            }
+            this.retryMaxAttempts = retryMaxAttempts;
+        }
+
+        public int getRetryBackoffSeconds() {
+            return retryBackoffSeconds;
+        }
+
+        public void setRetryBackoffSeconds(int retryBackoffSeconds) {
+            if (retryBackoffSeconds < 0) {
+                return;
+            }
+            this.retryBackoffSeconds = retryBackoffSeconds;
         }
 
         public List<String> getAllowedFields() {
