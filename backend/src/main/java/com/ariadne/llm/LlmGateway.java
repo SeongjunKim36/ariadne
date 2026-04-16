@@ -8,24 +8,36 @@ public class LlmGateway {
 
     private final LlmClient llmClient;
     private final LlmDataSanitizer sanitizer;
+    private final LlmFieldAllowlist fieldAllowlist;
+    private final LlmAuditLogService auditLogService;
     private final AriadneProperties ariadneProperties;
 
     public LlmGateway(
             LlmClient llmClient,
             LlmDataSanitizer sanitizer,
+            LlmFieldAllowlist fieldAllowlist,
+            LlmAuditLogService auditLogService,
             AriadneProperties ariadneProperties
     ) {
         this.llmClient = llmClient;
         this.sanitizer = sanitizer;
+        this.fieldAllowlist = fieldAllowlist;
+        this.auditLogService = auditLogService;
         this.ariadneProperties = ariadneProperties;
     }
 
     public String query(String prompt, GraphData contextData) {
         var transmissionLevel = TransmissionLevel.from(ariadneProperties.getLlm().getTransmissionLevel());
         var sanitizedContext = sanitizer.sanitize(contextData, transmissionLevel);
+        var allowlistedContext = fieldAllowlist.apply(sanitizedContext);
 
-        // Phase 2 focuses on forcing the gateway boundary first.
-        // Field allowlists and audit logging are layered on top in the next steps.
-        return llmClient.query(new LlmRequest(prompt, sanitizedContext));
+        try {
+            var response = llmClient.query(new LlmRequest(prompt, allowlistedContext));
+            auditLogService.recordSuccess(prompt, allowlistedContext);
+            return response;
+        } catch (RuntimeException exception) {
+            auditLogService.recordFailure(prompt, allowlistedContext, exception);
+            throw exception;
+        }
     }
 }

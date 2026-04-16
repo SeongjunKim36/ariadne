@@ -52,6 +52,8 @@ public class AriadneProperties {
     public static class Llm {
 
         private String transmissionLevel;
+        private List<String> allowedFields = new ArrayList<>(defaultAllowedFields());
+        private List<String> verboseAdditionalFields = new ArrayList<>(defaultVerboseAdditionalFields());
 
         public String getTransmissionLevel() {
             return transmissionLevel;
@@ -64,6 +66,83 @@ public class AriadneProperties {
             }
             var normalized = transmissionLevel.trim();
             this.transmissionLevel = normalized.isEmpty() ? null : normalized;
+        }
+
+        public List<String> getAllowedFields() {
+            return List.copyOf(allowedFields);
+        }
+
+        public void setAllowedFields(List<String> allowedFields) {
+            if (allowedFields == null || allowedFields.isEmpty()) {
+                this.allowedFields = new ArrayList<>(defaultAllowedFields());
+                return;
+            }
+            this.allowedFields = new ArrayList<>(allowedFields);
+        }
+
+        public List<String> getVerboseAdditionalFields() {
+            return List.copyOf(verboseAdditionalFields);
+        }
+
+        public void setVerboseAdditionalFields(List<String> verboseAdditionalFields) {
+            if (verboseAdditionalFields == null || verboseAdditionalFields.isEmpty()) {
+                this.verboseAdditionalFields = new ArrayList<>(defaultVerboseAdditionalFields());
+                return;
+            }
+            this.verboseAdditionalFields = new ArrayList<>(verboseAdditionalFields);
+        }
+
+        private static List<String> defaultAllowedFields() {
+            return List.of(
+                    "arn",
+                    "resourceId",
+                    "resourceType",
+                    "name",
+                    "region",
+                    "environment",
+                    "state",
+                    "status",
+                    "instanceType",
+                    "engine",
+                    "engineVersion",
+                    "cidr",
+                    "cidrBlock",
+                    "scheme",
+                    "type",
+                    "runtime",
+                    "groupId",
+                    "label",
+                    "riskLevel",
+                    "isPublic",
+                    "addressFamily",
+                    "availabilityZone",
+                    "privateIp",
+                    "publicIp",
+                    "endpoint",
+                    "handler",
+                    "recordCount",
+                    "inboundRuleCount",
+                    "outboundRuleCount",
+                    "port",
+                    "protocol",
+                    "direction",
+                    "confidence",
+                    "launchType",
+                    "runningCount",
+                    "desiredCount",
+                    "memoryMb",
+                    "instanceClass",
+                    "dnsName"
+            );
+        }
+
+        private static List<String> defaultVerboseAdditionalFields() {
+            return List.of(
+                    "tags",
+                    "env",
+                    "envVars",
+                    "environmentVariables"
+            );
         }
     }
 
