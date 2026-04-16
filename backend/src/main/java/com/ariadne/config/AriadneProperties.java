@@ -9,6 +9,10 @@ import java.util.List;
 public class AriadneProperties {
 
     private final Scan scan = new Scan();
+    private final Snapshot snapshot = new Snapshot();
+    private final Terraform terraform = new Terraform();
+    private final Eventbridge eventbridge = new Eventbridge();
+    private final Notifications notifications = new Notifications();
     private final Plugins plugins = new Plugins();
     private final Llm llm = new Llm();
 
@@ -18,6 +22,22 @@ public class AriadneProperties {
 
     public Plugins getPlugins() {
         return plugins;
+    }
+
+    public Snapshot getSnapshot() {
+        return snapshot;
+    }
+
+    public Terraform getTerraform() {
+        return terraform;
+    }
+
+    public Eventbridge getEventbridge() {
+        return eventbridge;
+    }
+
+    public Notifications getNotifications() {
+        return notifications;
     }
 
     public Llm getLlm() {
@@ -37,6 +57,181 @@ public class AriadneProperties {
                 return;
             }
             this.schedule = schedule;
+        }
+    }
+
+    public static class Snapshot {
+
+        private String schedule = "0 5 * * * *";
+        private final Retention retention = new Retention();
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public void setSchedule(String schedule) {
+            if (schedule == null || schedule.isBlank()) {
+                return;
+            }
+            this.schedule = schedule;
+        }
+
+        public Retention getRetention() {
+            return retention;
+        }
+    }
+
+    public static class Retention {
+
+        private int hourly = 48;
+        private int daily = 30;
+        private int weekly = 12;
+        private int maxStorageGb = 5;
+
+        public int getHourly() {
+            return hourly;
+        }
+
+        public void setHourly(int hourly) {
+            if (hourly < 0) {
+                return;
+            }
+            this.hourly = hourly;
+        }
+
+        public int getDaily() {
+            return daily;
+        }
+
+        public void setDaily(int daily) {
+            if (daily < 0) {
+                return;
+            }
+            this.daily = daily;
+        }
+
+        public int getWeekly() {
+            return weekly;
+        }
+
+        public void setWeekly(int weekly) {
+            if (weekly < 0) {
+                return;
+            }
+            this.weekly = weekly;
+        }
+
+        public int getMaxStorageGb() {
+            return maxStorageGb;
+        }
+
+        public void setMaxStorageGb(int maxStorageGb) {
+            if (maxStorageGb < 0) {
+                return;
+            }
+            this.maxStorageGb = maxStorageGb;
+        }
+    }
+
+    public static class Terraform {
+
+        private String statePath;
+
+        public String getStatePath() {
+            return statePath;
+        }
+
+        public void setStatePath(String statePath) {
+            this.statePath = statePath == null || statePath.isBlank() ? null : statePath.trim();
+        }
+    }
+
+    public static class Eventbridge {
+
+        private boolean enabled;
+        private String queueUrl;
+        private String schedule = "0 * * * * *";
+        private int pollIntervalSeconds = 60;
+        private int maxMessages = 5;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getQueueUrl() {
+            return queueUrl;
+        }
+
+        public void setQueueUrl(String queueUrl) {
+            this.queueUrl = queueUrl == null || queueUrl.isBlank() ? null : queueUrl.trim();
+        }
+
+        public int getPollIntervalSeconds() {
+            return pollIntervalSeconds;
+        }
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public void setSchedule(String schedule) {
+            if (schedule == null || schedule.isBlank()) {
+                return;
+            }
+            this.schedule = schedule;
+        }
+
+        public void setPollIntervalSeconds(int pollIntervalSeconds) {
+            if (pollIntervalSeconds <= 0) {
+                return;
+            }
+            this.pollIntervalSeconds = pollIntervalSeconds;
+        }
+
+        public int getMaxMessages() {
+            return maxMessages;
+        }
+
+        public void setMaxMessages(int maxMessages) {
+            if (maxMessages <= 0) {
+                return;
+            }
+            this.maxMessages = maxMessages;
+        }
+    }
+
+    public static class Notifications {
+
+        private final Slack slack = new Slack();
+
+        public Slack getSlack() {
+            return slack;
+        }
+    }
+
+    public static class Slack {
+
+        private boolean enabled;
+        private String webhookUrl;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getWebhookUrl() {
+            return webhookUrl;
+        }
+
+        public void setWebhookUrl(String webhookUrl) {
+            this.webhookUrl = webhookUrl == null || webhookUrl.isBlank() ? null : webhookUrl.trim();
         }
     }
 

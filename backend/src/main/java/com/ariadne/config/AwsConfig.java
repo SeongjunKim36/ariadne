@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.rds.RdsClient;
 import software.amazon.awssdk.services.route53.Route53Client;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.sts.StsClient;
 
@@ -102,6 +103,11 @@ public class AwsConfig {
     @Bean
     SsmClient ssmClient(AwsCredentialsProvider credentialsProvider) {
         return buildClient(SsmClient.builder(), credentialsProvider).build();
+    }
+
+    @Bean
+    SqsClient sqsClient(AwsCredentialsProvider credentialsProvider) {
+        return buildClient(SqsClient.builder(), credentialsProvider).build();
     }
 
     private <B extends software.amazon.awssdk.awscore.client.builder.AwsClientBuilder<B, ?>> B buildClient(
