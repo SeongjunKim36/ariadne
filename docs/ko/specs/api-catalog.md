@@ -112,15 +112,15 @@ interface ResourceDetail {
 
 | Method | Path | 설명 | 요청 | 응답 |
 |---|---|---|---|---|
-| POST | `/api/labels/generate` | 자동 레이블링 실행 | — | `LabelResult[]` |
+| POST | `/api/labels/generate` | 자동 레이블링 실행 | — | `LabelResponse[]` |
 | GET | `/api/labels` | 현재 레이블 목록 | — | `{ arn, tier, confidence, source }[]` |
-| PUT | `/api/labels/{arn}` | 수동 레이블 수정 | `{ tier: string }` | `LabelResult` |
+| PUT | `/api/labels/{arn}` | 수동 레이블 수정 | `{ tier: string }` | `LabelResponse` |
 
 ### 아키텍처 요약
 
 | Method | Path | 설명 | 쿼리 파라미터 | 응답 |
 |---|---|---|---|---|
-| POST | `/api/summary/generate` | 아키텍처 요약 생성 | `lang` (ko/en) | `{ summary: string, generatedAt }` |
+| POST | `/api/summary/generate` | 아키텍처 요약 생성 | `lang` (ko/en) | `ArchitectureSummaryResponse` |
 
 ### 응답 타입
 
@@ -129,8 +129,8 @@ interface NlQueryResponse {
   success: boolean;
   generatedCypher?: string;
   results?: Record<string, any>[];
-  explanation?: string;         // 비동기 — null이면 별도 요청
-  subgraph?: GraphResponse;     // 관련 서브그��프
+  explanation?: string;
+  subgraph?: GraphResponse;     // 관련 서브그래프
   truncated?: boolean;
   totalEstimate?: number;
   error?: string;
@@ -149,13 +149,39 @@ interface AuditReport {
 }
 
 interface AuditFinding {
+  id: number;
   ruleId: string;
   ruleName: string;
   riskLevel: "HIGH" | "MEDIUM" | "LOW";
   category: string;
   resourceArn: string;
   resourceName: string;
+  resourceType: string;
+  secondaryArn?: string | null;
+  secondaryName?: string | null;
+  detail?: string | null;
   remediationHint: string;
+}
+
+interface AuditExplanation {
+  generatedAt: string;
+  summary: string;
+  priorities: string[];
+  actions: string[];
+}
+
+interface LabelResponse {
+  arn: string;
+  tier: string;
+  confidence: string;
+  confidenceScore: number;
+  source: string;
+}
+
+interface ArchitectureSummaryResponse {
+  summary: string;
+  language: "ko" | "en";
+  generatedAt: string;
 }
 ```
 
@@ -169,7 +195,7 @@ interface AuditFinding {
 |---|---|---|---|---|
 | GET | `/api/snapshots` | 스냅샷 목록 | `period` (24h/7d/30d), `page`, `size` | `Page<SnapshotSummary>` |
 | GET | `/api/snapshots/{id}` | 스냅샷 상세 | — | `Snapshot` |
-| GET | `/api/snapshots/diff` | 두 스냅샷 비��� | `from`, `to` | `SnapshotDiff` |
+| GET | `/api/snapshots/diff` | 두 스냅샷 비교 | `from`, `to` | `SnapshotDiff` |
 | GET | `/api/snapshots/diff/latest` | 최근 diff | — | `SnapshotDiff` |
 
 ### 타임라인
