@@ -27,9 +27,11 @@ public class GraphPersistenceService {
     void initializeSchema() {
         for (var statement : List.of(
                 "CREATE CONSTRAINT unique_arn IF NOT EXISTS FOR (n:AwsResource) REQUIRE n.arn IS UNIQUE",
+                "CREATE INDEX idx_stale IF NOT EXISTS FOR (n:AwsResource) ON (n.stale)",
                 "CREATE INDEX idx_resource_id IF NOT EXISTS FOR (n:AwsResource) ON (n.resourceId)",
                 "CREATE INDEX idx_resource_type IF NOT EXISTS FOR (n:AwsResource) ON (n.resourceType)",
                 "CREATE INDEX idx_environment IF NOT EXISTS FOR (n:AwsResource) ON (n.environment)",
+                "CREATE INDEX idx_tier IF NOT EXISTS FOR (n:AwsResource) ON (n.tier)",
                 "CREATE INDEX idx_vpc_id IF NOT EXISTS FOR (n:Vpc) ON (n.resourceId)",
                 "CREATE INDEX idx_sg_group_id IF NOT EXISTS FOR (n:SecurityGroup) ON (n.groupId)",
                 "CREATE INDEX idx_cidr_source_cidr IF NOT EXISTS FOR (n:CidrSource) ON (n.cidr)",
@@ -38,6 +40,12 @@ public class GraphPersistenceService {
         )) {
             neo4jClient.query(statement).run();
         }
+        neo4jClient.query("""
+                        MATCH (n:AwsResource)
+                        WHERE n.stale IS NULL
+                        SET n.stale = false
+                        """)
+                .run();
     }
 
     @Transactional
