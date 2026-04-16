@@ -26,7 +26,7 @@ public class GraphQueryService {
         this.scanRunRepository = scanRunRepository;
     }
 
-    public GraphResponse fetchGraph(String environment, Set<String> resourceTypes, String vpcId) {
+    public GraphResponse fetchGraph(String environment, Set<String> resourceTypes, String vpcId, String tier) {
         var nodeRows = neo4jClient.query("""
                         MATCH (n:AwsResource)
                         WHERE coalesce(n.stale, false) = false
@@ -77,7 +77,7 @@ public class GraphQueryService {
         for (var entry : propertiesByArn.entrySet()) {
             var arn = entry.getKey();
             var properties = entry.getValue();
-            if (matchesFilters(properties, resourceTypes, environment)
+            if (matchesFilters(properties, resourceTypes, environment, tier)
                     && belongsToVpc(properties, parentByChild, propertiesByArn, neighborsByArn, vpcId)) {
                 nodesByArn.put(arn, properties);
             }
@@ -128,7 +128,7 @@ public class GraphQueryService {
         );
     }
 
-    private boolean matchesFilters(Map<String, Object> properties, Set<String> resourceTypes, String environment) {
+    private boolean matchesFilters(Map<String, Object> properties, Set<String> resourceTypes, String environment, String tier) {
         var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
         if (GraphViewSupport.isDetailOnlyResourceType(resourceType)) {
             return false;
@@ -140,7 +140,10 @@ public class GraphQueryService {
         var matchesType = resourceTypes == null
                 || resourceTypes.isEmpty()
                 || resourceTypes.contains(resourceType);
-        return matchesEnvironment && matchesType;
+        var matchesTier = tier == null
+                || tier.isBlank()
+                || tier.equalsIgnoreCase((String) properties.getOrDefault("tier", ""));
+        return matchesEnvironment && matchesType && matchesTier;
     }
 
     private boolean belongsToVpc(

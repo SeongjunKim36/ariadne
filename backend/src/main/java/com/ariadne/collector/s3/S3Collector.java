@@ -10,6 +10,8 @@ import com.ariadne.graph.relationship.RelationshipTypes;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketPolicyRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketPolicyStatusRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketNotificationConfigurationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketVersioningRequest;
@@ -59,7 +61,9 @@ public class S3Collector extends BaseCollector {
                     bucket.creationDate() == null ? null : bucket.creationDate().atOffset(ZoneOffset.UTC),
                     isVersioningEnabled(bucketName),
                     encryptionType(bucketName),
-                    isPublicAccessBlocked(bucketName)
+                    isPublicAccessBlocked(bucketName),
+                    isBucketPolicyPublic(bucketName),
+                    isSslEnforced(bucketName)
             ));
 
             var notification = readBucketNotification(bucketName);
@@ -125,6 +129,26 @@ public class S3Collector extends BaseCollector {
                 && Boolean.TRUE.equals(config.ignorePublicAcls())
                 && Boolean.TRUE.equals(config.blockPublicPolicy())
                 && Boolean.TRUE.equals(config.restrictPublicBuckets());
+    }
+
+    private boolean isBucketPolicyPublic(String bucketName) {
+        var response = readSafely(() -> withRetry(() -> s3Client.getBucketPolicyStatus(GetBucketPolicyStatusRequest.builder()
+                .bucket(bucketName)
+                .build())));
+        return response != null
+                && response.policyStatus() != null
+                && Boolean.TRUE.equals(response.policyStatus().isPublic());
+    }
+
+    private boolean isSslEnforced(String bucketName) {
+        var response = readSafely(() -> withRetry(() -> s3Client.getBucketPolicy(GetBucketPolicyRequest.builder()
+                .bucket(bucketName)
+                .build())));
+        if (response == null || !hasText(response.policy())) {
+            return false;
+        }
+        var policy = response.policy();
+        return policy.contains("aws:SecureTransport") && policy.contains("\"false\"");
     }
 
     private software.amazon.awssdk.services.s3.model.GetBucketNotificationConfigurationResponse readBucketNotification(String bucketName) {

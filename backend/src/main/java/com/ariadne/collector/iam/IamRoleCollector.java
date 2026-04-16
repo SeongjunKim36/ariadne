@@ -17,26 +17,37 @@ import software.amazon.awssdk.services.ecs.model.DescribeTaskDefinitionRequest;
 import software.amazon.awssdk.services.ecs.model.ListServicesRequest;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.AttachedPolicy;
+import software.amazon.awssdk.services.iam.model.GetPolicyRequest;
+import software.amazon.awssdk.services.iam.model.GetPolicyVersionRequest;
 import software.amazon.awssdk.services.iam.model.GetInstanceProfileRequest;
 import software.amazon.awssdk.services.iam.model.GetRoleRequest;
+import software.amazon.awssdk.services.iam.model.GetRolePolicyRequest;
+import software.amazon.awssdk.services.iam.model.ListRolePoliciesRequest;
 import software.amazon.awssdk.services.iam.model.ListAttachedRolePoliciesRequest;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.ListFunctionsRequest;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Component
 public class IamRoleCollector extends BaseCollector {
 
     private static final int ECS_DESCRIBE_BATCH_SIZE = 10;
     private static final String GLOBAL_REGION = "global";
+    private static final Pattern CROSS_ACCOUNT_PRINCIPAL = Pattern.compile("\"AWS\"\\s*:\\s*\"arn:aws:iam::(\\d{12}):");
+    private static final Pattern WILDCARD_ACTION = Pattern.compile("\"Action\"\\s*:\\s*(\\[.*?\\]|\"\\*\")", Pattern.DOTALL);
+    private static final Pattern PASS_ROLE_WILDCARD = Pattern.compile("iam:PassRole", Pattern.CASE_INSENSITIVE);
+    private static final Pattern RESOURCE_WILDCARD = Pattern.compile("\"Resource\"\\s*:\\s*(\\[.*?\\]|\"\\*\")", Pattern.DOTALL);
+    private static final Pattern WRITE_ACTION = Pattern.compile("(Put|Create|Delete|Update|Modify|Attach|Detach|Add|Remove|Set|Start|Stop|Terminate|PassRole)", Pattern.CASE_INSENSITIVE);
 
     private final Ec2Client ec2Client;
     private final EcsClient ecsClient;
@@ -231,6 +242,23 @@ public class IamRoleCollector extends BaseCollector {
                 .filter(this::hasText)
                 .sorted()
                 .toList();
+        var attachedPolicyDocuments = attachedPoliciesResponse.attachedPolicies().stream()
+                .map(this::fetchAttachedPolicyDocument)
+                .filter(this::hasText)
+                .toList();
+        var inlinePolicyDocuments = fetchInlinePolicyDocuments(role.roleName());
+        var policyDocuments = new ArrayList<String>();
+        policyDocuments.addAll(attachedPolicyDocuments);
+        policyDocuments.addAll(inlinePolicyDocuments);
+        var assumeRolePolicy = decodePolicy(role.assumeRolePolicyDocument());
+        var administratorAccess = attachedPolicies.stream().anyMatch("AdministratorAccess"::equals);
+        var wildcardAction = policyDocuments.stream().anyMatch(this::containsWildcardAction);
+        var wildcardWriteResource = policyDocuments.stream().anyMatch(this::containsWildcardWriteResource);
+        var passRoleWildcard = policyDocuments.stream().anyMatch(this::containsPassRoleWildcard);
+        var crossAccountAssume = hasCrossAccountAssume(assumeRolePolicy, context.accountId());
+        var lastUsedAt = role.roleLastUsed() == null || role.roleLastUsed().lastUsedDate() == null
+                ? null
+                : role.roleLastUsed().lastUsedDate().atOffset(java.time.ZoneOffset.UTC);
 
         return new IamRole(
                 role.arn(),
@@ -242,9 +270,55 @@ public class IamRoleCollector extends BaseCollector {
                 context.collectedAt(),
                 tags,
                 role.roleName(),
-                decodePolicy(role.assumeRolePolicyDocument()),
-                attachedPolicies
+                assumeRolePolicy,
+                attachedPolicies,
+                lastUsedAt,
+                wildcardAction,
+                wildcardWriteResource,
+                crossAccountAssume,
+                administratorAccess,
+                passRoleWildcard
         );
+    }
+
+    private String fetchAttachedPolicyDocument(AttachedPolicy attachedPolicy) {
+        if (attachedPolicy == null || !hasText(attachedPolicy.policyArn())) {
+            return null;
+        }
+        var policyResponse = withRetry(() -> iamClient.getPolicy(GetPolicyRequest.builder()
+                .policyArn(attachedPolicy.policyArn())
+                .build()));
+        if (policyResponse.policy() == null || !hasText(policyResponse.policy().defaultVersionId())) {
+            return null;
+        }
+        var versionResponse = withRetry(() -> iamClient.getPolicyVersion(GetPolicyVersionRequest.builder()
+                .policyArn(attachedPolicy.policyArn())
+                .versionId(policyResponse.policy().defaultVersionId())
+                .build()));
+        if (versionResponse.policyVersion() == null) {
+            return null;
+        }
+        return decodePolicy(versionResponse.policyVersion().document());
+    }
+
+    private List<String> fetchInlinePolicyDocuments(String roleName) {
+        var response = withRetry(() -> iamClient.listRolePolicies(ListRolePoliciesRequest.builder()
+                .roleName(roleName)
+                .build()));
+        var documents = new ArrayList<String>();
+        for (var policyName : response.policyNames()) {
+            if (!hasText(policyName)) {
+                continue;
+            }
+            var policyResponse = withRetry(() -> iamClient.getRolePolicy(GetRolePolicyRequest.builder()
+                    .roleName(roleName)
+                    .policyName(policyName)
+                    .build()));
+            if (policyResponse.policyDocument() != null) {
+                documents.add(decodePolicy(policyResponse.policyDocument()));
+            }
+        }
+        return List.copyOf(documents);
     }
 
     private void addRoleRelationship(
@@ -283,5 +357,36 @@ public class IamRoleCollector extends BaseCollector {
             return null;
         }
         return URLDecoder.decode(assumeRolePolicy, StandardCharsets.UTF_8);
+    }
+
+    private boolean containsWildcardAction(String policyDocument) {
+        return hasText(policyDocument) && WILDCARD_ACTION.matcher(policyDocument).find();
+    }
+
+    private boolean containsWildcardWriteResource(String policyDocument) {
+        if (!hasText(policyDocument)) {
+            return false;
+        }
+        return WRITE_ACTION.matcher(policyDocument).find() && RESOURCE_WILDCARD.matcher(policyDocument).find();
+    }
+
+    private boolean containsPassRoleWildcard(String policyDocument) {
+        if (!hasText(policyDocument)) {
+            return false;
+        }
+        return PASS_ROLE_WILDCARD.matcher(policyDocument).find() && RESOURCE_WILDCARD.matcher(policyDocument).find();
+    }
+
+    private boolean hasCrossAccountAssume(String assumeRolePolicy, String accountId) {
+        if (!hasText(assumeRolePolicy)) {
+            return false;
+        }
+        var matcher = CROSS_ACCOUNT_PRINCIPAL.matcher(assumeRolePolicy);
+        while (matcher.find()) {
+            if (!matcher.group(1).equals(accountId)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
