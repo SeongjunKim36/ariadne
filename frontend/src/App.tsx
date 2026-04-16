@@ -1,14 +1,35 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Activity, Bot, GitCompareArrows, Network, TimerReset, TriangleAlert } from 'lucide-react';
+import { Activity, Bot, GitCompareArrows, LoaderCircle, Network, TimerReset, TriangleAlert } from 'lucide-react';
 import useSWR from 'swr';
 
 import { fetchLatestScan } from './lib/api';
-import { AuditPage } from './components/AuditPage';
-import { QueryPage } from './components/QueryPage';
-import { TopologyPage } from './components/TopologyPage';
-import { TimelinePage } from './components/TimelinePage';
-import { DriftPage } from './components/DriftPage';
+
+const TopologyPage = lazy(() =>
+  import('./components/TopologyPage').then((module) => ({ default: module.TopologyPage })),
+);
+const AuditPage = lazy(() =>
+  import('./components/AuditPage').then((module) => ({ default: module.AuditPage })),
+);
+const TimelinePage = lazy(() =>
+  import('./components/TimelinePage').then((module) => ({ default: module.TimelinePage })),
+);
+const DriftPage = lazy(() =>
+  import('./components/DriftPage').then((module) => ({ default: module.DriftPage })),
+);
+const QueryPage = lazy(() =>
+  import('./components/QueryPage').then((module) => ({ default: module.QueryPage })),
+);
+
+function RouteSkeleton() {
+  return (
+    <div className="route-skeleton">
+      <LoaderCircle size={18} className="spin" />
+      <span>Loading view…</span>
+    </div>
+  );
+}
 
 function Shell() {
   const { data: latestScan } = useSWR('latest-scan', fetchLatestScan, {
@@ -82,13 +103,15 @@ function Shell() {
       </aside>
 
       <main className="app-main">
-        <Routes>
-          <Route path="/" element={<TopologyPage />} />
-          <Route path="/audit" element={<AuditPage />} />
-          <Route path="/timeline" element={<TimelinePage />} />
-          <Route path="/drift" element={<DriftPage />} />
-          <Route path="/query" element={<QueryPage />} />
-        </Routes>
+        <Suspense fallback={<RouteSkeleton />}>
+          <Routes>
+            <Route path="/" element={<TopologyPage />} />
+            <Route path="/audit" element={<AuditPage />} />
+            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/drift" element={<DriftPage />} />
+            <Route path="/query" element={<QueryPage />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

@@ -722,6 +722,19 @@ select {
   text-align: center;
 }
 
+.route-skeleton {
+  min-height: 240px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  color: #334155;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.06);
+}
+
 .placeholder-card h2 {
   margin: 0;
   font-family: "Iowan Old Style", "Georgia", serif;
