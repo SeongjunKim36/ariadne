@@ -30,6 +30,14 @@ final class GraphViewSupport {
         return resourceType != null && DETAIL_ONLY_RESOURCE_TYPES.contains(resourceType.toUpperCase(Locale.ROOT));
     }
 
+    static Set<String> detailOnlyResourceTypes() {
+        return DETAIL_ONLY_RESOURCE_TYPES;
+    }
+
+    static Set<String> parentRelationshipTypes() {
+        return PARENT_RELATIONSHIP_TYPES;
+    }
+
     static String toFrontendType(String resourceType) {
         if (resourceType == null) {
             return "unknown";

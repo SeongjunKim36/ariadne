@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,10 +28,34 @@ public class GraphQueryService {
     }
 
     public GraphResponse fetchGraph(String environment, Set<String> resourceTypes, String vpcId, String tier) {
+        var normalizedEnvironment = normalizeFilterValue(environment);
+        var normalizedTier = normalizeFilterValue(tier);
+        var normalizedResourceTypes = normalizeResourceTypes(resourceTypes);
+
+        if (vpcId == null || vpcId.isBlank()) {
+            return fetchGraphWithoutVpcFilter(normalizedEnvironment, normalizedResourceTypes, normalizedTier);
+        }
+        return fetchGraphWithVpcFilter(normalizedEnvironment, normalizedResourceTypes, vpcId, normalizedTier);
+    }
+
+    private GraphResponse fetchGraphWithoutVpcFilter(String environment, Set<String> resourceTypes, String tier) {
+        var baseNodesByArn = fetchFilteredNodes(environment, resourceTypes, tier);
+        if (baseNodesByArn.isEmpty()) {
+            return emptyGraphResponse();
+        }
+
+        var parentByChild = fetchParentRelationships();
+        var visibleArns = expandParentHierarchy(baseNodesByArn.keySet(), parentByChild);
+        var nodesByArn = fetchNodesByArn(visibleArns);
+        var edgeRows = fetchEdgesWithin(visibleArns);
+        return toGraphResponse(nodesByArn, parentByChild, edgeRows);
+    }
+
+    private GraphResponse fetchGraphWithVpcFilter(String environment, Set<String> resourceTypes, String vpcId, String tier) {
         var nodeRows = neo4jClient.query("""
                         MATCH (n:AwsResource)
-                        WHERE coalesce(n.stale, false) = false
-                        RETURN properties(n) AS properties, labels(n) AS labels
+                        WHERE n.stale = false
+                        RETURN properties(n) AS properties
                         ORDER BY n.name, n.resourceId
                         """)
                 .fetch()
@@ -38,8 +63,8 @@ public class GraphQueryService {
 
         var edgeRows = neo4jClient.query("""
                         MATCH (source:AwsResource)-[r]->(target:AwsResource)
-                        WHERE coalesce(source.stale, false) = false
-                          AND coalesce(target.stale, false) = false
+                        WHERE source.stale = false
+                          AND target.stale = false
                         RETURN source.arn AS sourceArn,
                                target.arn AS targetArn,
                                type(r) AS relationshipType,
@@ -66,11 +91,10 @@ public class GraphQueryService {
         }
 
         for (var nodeRow : nodeRows) {
-            @SuppressWarnings("unchecked")
-            var properties = new LinkedHashMap<>((Map<String, Object>) nodeRow.get("properties"));
+            var properties = asProperties(nodeRow);
             var arn = (String) properties.get("arn");
             propertiesByArn.put(arn, properties);
-            var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
+            var resourceType = normalizedResourceType(properties.get("resourceType"));
             resourceTypeByArn.put(arn, resourceType);
         }
 
@@ -102,47 +126,202 @@ public class GraphQueryService {
             var sourceArn = (String) edgeRow.get("sourceArn");
             var targetArn = (String) edgeRow.get("targetArn");
             if (nodesByArn.containsKey(sourceArn) && nodesByArn.containsKey(targetArn)) {
-                @SuppressWarnings("unchecked")
-                var properties = (Map<String, Object>) edgeRow.get("properties");
-                var relationshipType = (String) edgeRow.get("relationshipType");
-                edges.add(new GraphResponse.GraphEdge(
-                        sourceArn + "-" + relationshipType + "-" + targetArn,
-                        sourceArn,
-                        targetArn,
-                        relationshipType,
-                        properties == null ? Map.of() : properties
-                ));
+                edges.add(toGraphEdge(edgeRow));
             }
         }
 
-        var latestCompleted = scanRunRepository.findTopByStatusOrderByCompletedAtDesc(ScanStatus.COMPLETED).orElse(null);
-        return new GraphResponse(
-                nodes,
-                edges,
-                new GraphResponse.GraphMetadata(
-                        nodes.size(),
-                        edges.size(),
-                        latestCompleted == null ? null : latestCompleted.getCompletedAt(),
-                        latestCompleted == null ? 0 : latestCompleted.getDurationMs()
-                )
+        return new GraphResponse(nodes, edges, latestMetadata(nodes.size(), edges.size()));
+    }
+
+    private LinkedHashMap<String, Map<String, Object>> fetchFilteredNodes(
+            String environment,
+            Set<String> resourceTypes,
+            String tier
+    ) {
+        var rows = neo4jClient.query("""
+                        MATCH (n:AwsResource)
+                        WHERE n.stale = false
+                          AND NOT n.resourceType IN $detailOnlyResourceTypes
+                          AND ($environment = '' OR n.environment = $environment OR n.resourceType = 'CIDR_SOURCE')
+                          AND ($tier = '' OR n.tier = $tier)
+                          AND ($resourceTypesEmpty OR n.resourceType IN $resourceTypes)
+                        RETURN properties(n) AS properties
+                        ORDER BY n.name, n.resourceId
+                        """)
+                .bind(new ArrayList<>(GraphViewSupport.detailOnlyResourceTypes()))
+                .to("detailOnlyResourceTypes")
+                .bind(environment)
+                .to("environment")
+                .bind(tier)
+                .to("tier")
+                .bind(resourceTypes.isEmpty())
+                .to("resourceTypesEmpty")
+                .bind(new ArrayList<>(resourceTypes))
+                .to("resourceTypes")
+                .fetch()
+                .all();
+
+        var nodesByArn = new LinkedHashMap<String, Map<String, Object>>();
+        for (var row : rows) {
+            var properties = asProperties(row);
+            nodesByArn.put((String) properties.get("arn"), properties);
+        }
+        return nodesByArn;
+    }
+
+    private Map<String, String> fetchParentRelationships() {
+        var rows = neo4jClient.query("""
+                        MATCH (source:AwsResource)-[r]->(target:AwsResource)
+                        WHERE source.stale = false
+                          AND target.stale = false
+                          AND type(r) IN $parentRelationshipTypes
+                        RETURN source.arn AS sourceArn,
+                               target.arn AS targetArn
+                        """)
+                .bind(new ArrayList<>(GraphViewSupport.parentRelationshipTypes()))
+                .to("parentRelationshipTypes")
+                .fetch()
+                .all();
+
+        var parentByChild = new HashMap<String, String>();
+        for (var row : rows) {
+            parentByChild.put((String) row.get("sourceArn"), (String) row.get("targetArn"));
+        }
+        return parentByChild;
+    }
+
+    private Set<String> expandParentHierarchy(Set<String> initialArns, Map<String, String> parentByChild) {
+        var visibleArns = new HashSet<>(initialArns);
+        var queue = new ArrayDeque<>(initialArns);
+
+        while (!queue.isEmpty()) {
+            var childArn = queue.removeFirst();
+            var parentArn = parentByChild.get(childArn);
+            if (parentArn != null && visibleArns.add(parentArn)) {
+                queue.addLast(parentArn);
+            }
+        }
+
+        return visibleArns;
+    }
+
+    private LinkedHashMap<String, Map<String, Object>> fetchNodesByArn(Set<String> arns) {
+        if (arns.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
+
+        var rows = neo4jClient.query("""
+                        MATCH (n:AwsResource)
+                        WHERE n.arn IN $arns
+                        RETURN properties(n) AS properties
+                        ORDER BY n.name, n.resourceId
+                        """)
+                .bind(new ArrayList<>(arns))
+                .to("arns")
+                .fetch()
+                .all();
+
+        var nodesByArn = new LinkedHashMap<String, Map<String, Object>>();
+        for (var row : rows) {
+            var properties = asProperties(row);
+            nodesByArn.put((String) properties.get("arn"), properties);
+        }
+        return nodesByArn;
+    }
+
+    private List<Map<String, Object>> fetchEdgesWithin(Set<String> arns) {
+        if (arns.isEmpty()) {
+            return List.of();
+        }
+
+        return List.copyOf(neo4jClient.query("""
+                        MATCH (source:AwsResource)-[r]->(target:AwsResource)
+                        WHERE source.stale = false
+                          AND target.stale = false
+                          AND source.arn IN $arns
+                          AND target.arn IN $arns
+                        RETURN source.arn AS sourceArn,
+                               target.arn AS targetArn,
+                               type(r) AS relationshipType,
+                               properties(r) AS properties
+                        """)
+                .bind(new ArrayList<>(arns))
+                .to("arns")
+                .fetch()
+                .all());
+    }
+
+    private GraphResponse toGraphResponse(
+            Map<String, Map<String, Object>> nodesByArn,
+            Map<String, String> parentByChild,
+            List<Map<String, Object>> edgeRows
+    ) {
+        var resourceTypeByArn = new HashMap<String, String>();
+        for (var entry : nodesByArn.entrySet()) {
+            resourceTypeByArn.put(entry.getKey(), normalizedResourceType(entry.getValue().get("resourceType")));
+        }
+
+        var nodes = new ArrayList<GraphResponse.GraphNode>();
+        for (var entry : nodesByArn.entrySet()) {
+            var arn = entry.getKey();
+            var properties = entry.getValue();
+            var parentArn = parentByChild.get(arn);
+            var parentResourceType = resourceTypeByArn.get(parentArn);
+            nodes.add(new GraphResponse.GraphNode(
+                    arn,
+                    GraphViewSupport.toFrontendType((String) properties.get("resourceType")),
+                    properties,
+                    GraphViewSupport.isGroupParent(parentResourceType) ? parentArn : null
+            ));
+        }
+
+        var edges = edgeRows.stream()
+                .map(this::toGraphEdge)
+                .toList();
+
+        return new GraphResponse(nodes, edges, latestMetadata(nodes.size(), edges.size()));
+    }
+
+    private GraphResponse.GraphEdge toGraphEdge(Map<String, Object> edgeRow) {
+        var sourceArn = (String) edgeRow.get("sourceArn");
+        var targetArn = (String) edgeRow.get("targetArn");
+        var relationshipType = (String) edgeRow.get("relationshipType");
+        @SuppressWarnings("unchecked")
+        var properties = (Map<String, Object>) edgeRow.get("properties");
+        return new GraphResponse.GraphEdge(
+                sourceArn + "-" + relationshipType + "-" + targetArn,
+                sourceArn,
+                targetArn,
+                relationshipType,
+                properties == null ? Map.of() : properties
         );
     }
 
+    private GraphResponse.GraphMetadata latestMetadata(int totalNodes, int totalEdges) {
+        var latestCompleted = scanRunRepository.findTopByStatusOrderByCompletedAtDesc(ScanStatus.COMPLETED).orElse(null);
+        return new GraphResponse.GraphMetadata(
+                totalNodes,
+                totalEdges,
+                latestCompleted == null ? null : latestCompleted.getCompletedAt(),
+                latestCompleted == null ? 0 : latestCompleted.getDurationMs()
+        );
+    }
+
+    private GraphResponse emptyGraphResponse() {
+        return new GraphResponse(List.of(), List.of(), latestMetadata(0, 0));
+    }
+
     private boolean matchesFilters(Map<String, Object> properties, Set<String> resourceTypes, String environment, String tier) {
-        var resourceType = ((String) properties.getOrDefault("resourceType", "")).toUpperCase(java.util.Locale.ROOT);
+        var resourceType = normalizedResourceType(properties.get("resourceType"));
         if (GraphViewSupport.isDetailOnlyResourceType(resourceType)) {
             return false;
         }
-        var matchesEnvironment = environment == null
-                || environment.isBlank()
-                || environment.equalsIgnoreCase((String) properties.getOrDefault("environment", "unknown"))
+        var matchesEnvironment = environment.isBlank()
+                || environment.equals(String.valueOf(properties.getOrDefault("environment", "")).toLowerCase(Locale.ROOT))
                 || "CIDR_SOURCE".equals(resourceType);
-        var matchesType = resourceTypes == null
-                || resourceTypes.isEmpty()
-                || resourceTypes.contains(resourceType);
-        var matchesTier = tier == null
-                || tier.isBlank()
-                || tier.equalsIgnoreCase((String) properties.getOrDefault("tier", ""));
+        var matchesType = resourceTypes.isEmpty() || resourceTypes.contains(resourceType);
+        var matchesTier = tier.isBlank()
+                || tier.equals(String.valueOf(properties.getOrDefault("tier", "")).toLowerCase(Locale.ROOT));
         return matchesEnvironment && matchesType && matchesTier;
     }
 
@@ -193,5 +372,33 @@ public class GraphQueryService {
         }
 
         return false;
+    }
+
+    private LinkedHashMap<String, Object> asProperties(Map<String, Object> row) {
+        @SuppressWarnings("unchecked")
+        var properties = (Map<String, Object>) row.get("properties");
+        return new LinkedHashMap<>(properties);
+    }
+
+    private Set<String> normalizeResourceTypes(Set<String> resourceTypes) {
+        if (resourceTypes == null || resourceTypes.isEmpty()) {
+            return Set.of();
+        }
+        return resourceTypes.stream()
+                .map(this::normalizeFilterValue)
+                .map(String::toUpperCase)
+                .filter(value -> !value.isBlank())
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+    }
+
+    private String normalizedResourceType(Object resourceType) {
+        if (resourceType == null) {
+            return "";
+        }
+        return String.valueOf(resourceType).toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeFilterValue(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }
