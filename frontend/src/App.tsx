@@ -1,34 +1,14 @@
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Activity, Bot, Network, ScrollText, TimerReset, TriangleAlert } from 'lucide-react';
+import { Activity, Bot, GitCompareArrows, Network, TimerReset, TriangleAlert } from 'lucide-react';
 import useSWR from 'swr';
 
 import { fetchLatestScan } from './lib/api';
 import { AuditPage } from './components/AuditPage';
 import { QueryPage } from './components/QueryPage';
 import { TopologyPage } from './components/TopologyPage';
-
-function PlaceholderPage({
-  icon: Icon,
-  title,
-  copy,
-}: {
-  icon: typeof ScrollText;
-  title: string;
-  copy: string;
-}) {
-  return (
-    <div className="placeholder-shell">
-      <div className="placeholder-card">
-        <span className="placeholder-icon">
-          <Icon size={18} />
-        </span>
-        <h2>{title}</h2>
-        <p>{copy}</p>
-      </div>
-    </div>
-  );
-}
+import { TimelinePage } from './components/TimelinePage';
+import { DriftPage } from './components/DriftPage';
 
 function Shell() {
   const { data: latestScan } = useSWR('latest-scan', fetchLatestScan, {
@@ -58,6 +38,10 @@ function Shell() {
           <NavLink to="/timeline" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
             <TimerReset size={16} />
             <span>Timeline</span>
+          </NavLink>
+          <NavLink to="/drift" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+            <GitCompareArrows size={16} />
+            <span>Drift</span>
           </NavLink>
           <NavLink to="/query" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
             <Bot size={16} />
@@ -101,20 +85,9 @@ function Shell() {
         <Routes>
           <Route path="/" element={<TopologyPage />} />
           <Route path="/audit" element={<AuditPage />} />
-          <Route
-            path="/timeline"
-            element={
-              <PlaceholderPage
-                icon={TimerReset}
-                title="Timeline is queued for drift work"
-                copy="Phase 4 will layer history and diffs over the same resource graph."
-              />
-            }
-          />
-          <Route
-            path="/query"
-            element={<QueryPage />}
-          />
+          <Route path="/timeline" element={<TimelinePage />} />
+          <Route path="/drift" element={<DriftPage />} />
+          <Route path="/query" element={<QueryPage />} />
         </Routes>
       </main>
     </div>
