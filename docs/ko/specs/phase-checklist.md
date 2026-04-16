@@ -141,21 +141,21 @@
 |---|---|---|---|---|
 | 2-16 | LlmGateway 강제 인터셉터 (sanitize 우회 차단) | [x] | 2026-04-15 | `ClaudeClient` package-private + `LlmGateway` 단일 진입점 + sanitize 강제 테스트 추가 |
 | 2-17 | LlmDataSanitizer (strict/normal/verbose) | [x] | 2026-04-15 | strict는 식별자 alias/구조 유지, normal은 tags/env 제거, verbose는 tags 유지 + env redaction 적용 |
-| 2-18 | field allowlist 적용 | [ ] | | |
+| 2-18 | field allowlist 적용 | [x] | 2026-04-16 | `LlmFieldAllowlist` 추가, level-aware allowlist로 node/edge data를 허용 필드만 투영 |
 | 2-19 | fail-closed 동작 (레벨 미설정 시 STRICT) | [x] | 2026-04-15 | transmission level 누락/오타 시 `STRICT` 강제, 단위 테스트로 검증 |
-| 2-20 | 감사 로그 테이블 (llm_audit_log) + API | [ ] | | |
-| 2-21 | 통합 테스트: 리댁션 정확성 | [ ] | | |
-| 2-22 | 통합 테스트: 전송 레벨별 데이터 검증 | [ ] | | |
+| 2-20 | 감사 로그 테이블 (llm_audit_log) + API | [x] | 2026-04-16 | `LlmAuditLog` JPA 엔티티 + `/api/audit/llm`, `/api/audit/llm/stats` 추가 |
+| 2-21 | 통합 테스트: 리댁션 정확성 | [x] | 2026-04-16 | `LlmGatewayIntegrationTest`와 `RedactionEngineTest`로 env/token/URI/userinfo/private key redaction 검증 |
+| 2-22 | 통합 테스트: 전송 레벨별 데이터 검증 | [x] | 2026-04-16 | Spring 통합 테스트로 strict/verbose shaping, allowlist, audit persistence 검증 |
 
 ### Week 4 (버퍼): 안정화
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 2-23 | dongne-v2 실계정 상세 수집 테스트 | [ ] | | |
-| 2-24 | SG 시각화 UX 개선 | [ ] | | |
-| 2-25 | 리댁션 엔진 엣지 케이스 처리 | [ ] | | |
+| 2-23 | dongne-v2 실계정 상세 수집 테스트 | [x] | 2026-04-16 | `AWS_PROFILE=ariadne` 실계정 재스캔 성공 (`24 nodes / 45 edges / 3.8s`), SG 상세 연결(`ALLOWS_TO`, `EGRESS_TO`) 확인 |
+| 2-24 | SG 시각화 UX 개선 | [x] | 2026-04-16 | Topology의 Security Lens 추가: SG rule edge 요약 카드, public exposure/self ref 카운트, rule/inferred link 토글 |
+| 2-25 | 리댁션 엔진 엣지 케이스 처리 | [x] | 2026-04-16 | URI userinfo/query token, ASIA temp key, bearer token, PEM private key redaction 보강 |
 
-**Phase 2 진행률**: 18/25 (72%)
+**Phase 2 진행률**: 25/25 (100%) — 종료
 
 ---
 
