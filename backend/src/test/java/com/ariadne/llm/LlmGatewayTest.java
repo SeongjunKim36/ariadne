@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -135,5 +136,28 @@ class LlmGatewayTest {
 
         verify(auditLogService).recordFailure(org.mockito.ArgumentMatchers.eq("help"), org.mockito.ArgumentMatchers.eq(sanitized), exceptionCaptor.capture());
         assertThat(exceptionCaptor.getValue()).hasMessageContaining("Claude unavailable");
+    }
+
+    @Test
+    void retriesTransientFailuresBeforeRecordingSuccess() {
+        var properties = new AriadneProperties();
+        properties.getLlm().setRetryMaxAttempts(2);
+        properties.getLlm().setRetryBackoffSeconds(0);
+
+        var gateway = new LlmGateway(llmClient, sanitizer, fieldAllowlist, auditLogService, properties);
+        var graphData = new GraphData("subgraph:prod", Map.of("resourceId", "i-1234"));
+        var sanitized = new SanitizedGraphData("subgraph:prod", TransmissionLevel.STRICT, Map.of("resourceId", "EC2-1"));
+
+        when(sanitizer.sanitize(graphData, TransmissionLevel.STRICT)).thenReturn(sanitized);
+        when(fieldAllowlist.apply(sanitized)).thenReturn(sanitized);
+        when(llmClient.query(requestCaptor.capture()))
+                .thenThrow(new IllegalStateException("temporary failure"))
+                .thenReturn("recovered");
+
+        var result = gateway.query("retry this", graphData);
+
+        assertThat(result).isEqualTo("recovered");
+        verify(auditLogService).recordSuccess("retry this", sanitized);
+        verify(auditLogService, never()).recordFailure(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 }

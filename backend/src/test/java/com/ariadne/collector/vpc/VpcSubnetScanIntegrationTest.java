@@ -148,7 +148,8 @@ class VpcSubnetScanIntegrationTest {
         GraphResponse graph = graphQueryService.fetchGraph(
                 "prod",
                 Set.of("VPC", "SUBNET", "SECURITY_GROUP", "EC2"),
-                vpcId
+                vpcId,
+                null
         );
 
         assertThat(graph.nodes()).hasSize(4);

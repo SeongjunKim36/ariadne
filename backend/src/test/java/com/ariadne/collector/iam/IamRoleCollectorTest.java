@@ -27,11 +27,19 @@ import software.amazon.awssdk.services.ecs.paginators.ListClustersIterable;
 import software.amazon.awssdk.services.ecs.paginators.ListServicesIterable;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.AttachedPolicy;
+import software.amazon.awssdk.services.iam.model.GetPolicyRequest;
+import software.amazon.awssdk.services.iam.model.GetPolicyResponse;
+import software.amazon.awssdk.services.iam.model.GetPolicyVersionRequest;
+import software.amazon.awssdk.services.iam.model.GetPolicyVersionResponse;
 import software.amazon.awssdk.services.iam.model.GetInstanceProfileRequest;
 import software.amazon.awssdk.services.iam.model.GetInstanceProfileResponse;
 import software.amazon.awssdk.services.iam.model.GetRoleRequest;
 import software.amazon.awssdk.services.iam.model.GetRoleResponse;
 import software.amazon.awssdk.services.iam.model.ListAttachedRolePoliciesRequest;
+import software.amazon.awssdk.services.iam.model.ListRolePoliciesRequest;
+import software.amazon.awssdk.services.iam.model.ListRolePoliciesResponse;
+import software.amazon.awssdk.services.iam.model.Policy;
+import software.amazon.awssdk.services.iam.model.PolicyVersion;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.FunctionConfiguration;
 import software.amazon.awssdk.services.lambda.model.ListFunctionsRequest;
@@ -165,9 +173,27 @@ class IamRoleCollectorTest {
             return software.amazon.awssdk.services.iam.model.ListAttachedRolePoliciesResponse.builder()
                     .attachedPolicies(AttachedPolicy.builder()
                             .policyName("ManagedPolicyFor-" + request.roleName())
+                            .policyArn("arn:aws:iam::aws:policy/ManagedPolicyFor-" + request.roleName())
                             .build())
                     .build();
         });
+        when(iamClient.getPolicy(any(GetPolicyRequest.class))).thenAnswer(invocation -> {
+            var request = invocation.getArgument(0, GetPolicyRequest.class);
+            return GetPolicyResponse.builder()
+                    .policy(Policy.builder()
+                            .arn(request.policyArn())
+                            .defaultVersionId("v1")
+                            .build())
+                    .build();
+        });
+        when(iamClient.getPolicyVersion(any(GetPolicyVersionRequest.class))).thenReturn(GetPolicyVersionResponse.builder()
+                .policyVersion(PolicyVersion.builder()
+                        .document("%7B%22Version%22%3A%222012-10-17%22,%22Statement%22:%5B%7B%22Action%22:%5B%22s3:GetObject%22%5D,%22Resource%22:%5B%22arn:aws:s3:::example-bucket/*%22%5D%7D%5D%7D")
+                        .build())
+                .build());
+        when(iamClient.listRolePolicies(any(ListRolePoliciesRequest.class))).thenReturn(ListRolePoliciesResponse.builder()
+                .policyNames(List.of())
+                .build());
 
         var result = new IamRoleCollector(ec2Client, ecsClient, iamClient, lambdaClient).collect(CONTEXT);
 
