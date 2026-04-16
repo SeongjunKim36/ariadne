@@ -267,19 +267,21 @@
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
 | 5-1 | dongne-v2 실 AWS 계정 전체 연동 | [x] | 2026-04-16 | `AWS_PROFILE=ariadne` 기준 preflight/scan/snapshot/timeline 재검증 완료, 최신 실스캔 `24 nodes / 45 edges`, snapshot 2개 누적 |
-| 5-2 | 대규모 성능 테스트 (리소스 수백 개) | [ ] | | |
+| 5-2 | 대규모 성능 테스트 (리소스 수백 개) | [x] | 2026-04-16 | `GraphQueryServicePerformanceIntegrationTest`로 `457 nodes / 456 edges / 97ms` 확인 |
 | 5-3 | React Flow 렌더링 최적화 (가상화/클러스터링) | [x] | 2026-04-16 | route-level lazy loading, vendor chunk split, `onlyRenderVisibleElements`, 실제 dev UX 기준 CORS 없는 상대 API 기본값 적용 |
-| 5-4 | Neo4j 쿼리 최적화 (EXPLAIN PROFILE) | [ ] | | 필요 시 |
+| 5-4 | Neo4j 쿼리 최적화 (EXPLAIN PROFILE) | [x] | 2026-04-16 | filtered node set → parent hierarchy expansion → in-set edge fetch 경로로 최적화, `idx_stale`/`idx_tier` 추가 (`docs/ko/specs/phase-5-performance.md`) |
 | 5-5 | 영어 README 작성 (설치 가이드, 스크린샷) | [x] | 2026-04-16 | 루트 `README.md` 작성 + Topology/Audit/Timeline 실스크린샷 반영 |
-| 5-6 | 데모 GIF / 영상 녹화 | [ ] | | |
+| 5-6 | 데모 GIF / 영상 녹화 | [x] | 2026-04-16 | `docs/assets/demo/ariadne-demo.gif` 추가 |
 | 5-7 | "왜 Cartography/Backstage/Datadog이 아닌가" 섹션 | [x] | 2026-04-16 | `README.md` 비교 섹션 추가 |
 | 5-8 | 케이스 스터디 블로그 초안 | [x] | 2026-04-16 | `docs/ko/case-study-dongne-v2.md` 작성 + 실제 감사/스냅샷 수치 반영 |
 | 5-9 | 오픈소스 공개 (GitHub public) | [x] | 2026-04-16 | 저장소 visibility `PUBLIC` 확인 |
-| 5-10 | Portfolio 리포 업데이트 | [ ] | | |
+| 5-10 | Portfolio 리포 업데이트 | [ ] | | 외부 `Portfolio` 리포가 원격 대비 `main` 6커밋 ahead 상태라 안전한 분리 PR 준비 후 반영 예정 |
 
-**Phase 5 진행률**: 6/10 (60%)
+**Phase 5 진행률**: 9/10 (90%)
 
 ---
+
+**전체 진행률**: 139/140 (99%)
 
 ## 전체 진행률
 
@@ -290,5 +292,5 @@
 | 2: 상세 수집 + 보안 | 25 | 25 | 100% |
 | 3: AI 의미층 | 26 | 26 | 100% |
 | 4: 드리프트 | 25 | 25 | 100% |
-| 5: 포트폴리오 | 10 | 6 | 60% |
-| **전체** | **140** | **136** | **97%** |
+| 5: 포트폴리오 | 10 | 9 | 90% |
+| **전체** | **140** | **139** | **99%** |
