@@ -58,6 +58,30 @@ class RedactionEngineTest {
     }
 
     @Test
+    void preservesUriShapeWhileMaskingUserInfoAndSensitiveQueryParameters() {
+        var redacted = redactionEngine.redact(Map.of(
+                "EXTERNAL_URL", "postgresql://app:topsecret@db.internal:5432/app?token=abcd1234&sslmode=require"
+        ));
+
+        assertThat(redacted.get("EXTERNAL_URL"))
+                .isEqualTo("postgresql://app:***REDACTED***@db.internal:5432/app?token=***REDACTED***&sslmode=require");
+    }
+
+    @Test
+    void redactsPrivateKeysSessionCredentialsAndBearerTokens() {
+        var redacted = redactionEngine.redact(Map.of(
+                "TEMP_ACCESS_KEY", "ASIAIOSFODNN7EXAMPLE",
+                "AUTHORIZATION", "Bearer abcdefghijklmnopqrstuvwxyz123456",
+                "TLS_PRIVATE_KEY", "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----"
+        ));
+
+        assertThat(redacted)
+                .containsEntry("TEMP_ACCESS_KEY", RedactionEngine.REDACTED)
+                .containsEntry("AUTHORIZATION", RedactionEngine.REDACTED)
+                .containsEntry("TLS_PRIVATE_KEY", RedactionEngine.REDACTED);
+    }
+
+    @Test
     void whitelistModeKeepsAllowedKeysAndMasksOthers() {
         var redacted = redactionEngine.redactWhitelistMode(
                 Map.of(

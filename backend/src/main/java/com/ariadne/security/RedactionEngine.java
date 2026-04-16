@@ -28,12 +28,20 @@ public class RedactionEngine {
     private static final List<Pattern> VALUE_PATTERNS = List.of(
             Pattern.compile("(?i)^(sk-|pk-|ak-|rk-)\\w+"),
             Pattern.compile("(?i)^AKIA[0-9A-Z]{16}$"),
+            Pattern.compile("(?i)^ASIA[0-9A-Z]{16}$"),
+            Pattern.compile("(?i)^(bearer|basic)\\s+[a-z0-9._~+/=-]{12,}$"),
+            Pattern.compile("(?i)^[0-9a-f]{32,}$"),
             Pattern.compile("^[A-Za-z0-9+/]{20,}={0,2}$"),
-            Pattern.compile("(?i)^jdbc:[a-z0-9]+://.*password=[^&\\s;]+.*$")
+            Pattern.compile("(?i)^jdbc:[a-z0-9]+://.*password=[^&\\s;]+.*$"),
+            Pattern.compile("(?s)^-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----$")
     );
 
-    private static final Pattern PASSWORD_PARAMETER_PATTERN = Pattern.compile(
-            "(?i)(password=)([^&\\s;]+)"
+    private static final Pattern SENSITIVE_PARAMETER_PATTERN = Pattern.compile(
+            "(?i)((?:password|passwd|pwd|token|secret|api[_-]?key|access[_-]?key)=)([^&\\s;]+)"
+    );
+
+    private static final Pattern URI_USERINFO_PATTERN = Pattern.compile(
+            "(://[^\\s:/?#]+:)([^@\\s/]+)(@)"
     );
 
     public Map<String, String> redact(Map<String, String> values) {
@@ -137,6 +145,7 @@ public class RedactionEngine {
     }
 
     private String partiallyRedact(String value) {
-        return PASSWORD_PARAMETER_PATTERN.matcher(value).replaceAll("$1" + REDACTED);
+        var withRedactedParameters = SENSITIVE_PARAMETER_PATTERN.matcher(value).replaceAll("$1" + REDACTED);
+        return URI_USERINFO_PATTERN.matcher(withRedactedParameters).replaceAll("$1" + REDACTED + "$3");
     }
 }
