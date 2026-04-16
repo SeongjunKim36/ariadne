@@ -234,6 +234,8 @@ export function TopologyPage() {
   const [environment, setEnvironment] = useState('');
   const [selectedVpc, setSelectedVpc] = useState('');
   const [activeTypes, setActiveTypes] = useState<string[]>([]);
+  const [showSecurityEdges, setShowSecurityEdges] = useState(true);
+  const [showInferredEdges, setShowInferredEdges] = useState(true);
   const [selectedArn, setSelectedArn] = useState<string | null>(null);
   const [focusedArn, setFocusedArn] = useState<string | null>(null);
   const [activeScanId, setActiveScanId] = useState<string | null>(null);
@@ -315,7 +317,7 @@ export function TopologyPage() {
     }
   }
   const cidrAllowed = activeTypes.length === 0 || activeTypes.includes('cidr');
-  if (cidrAllowed) {
+  if (cidrAllowed && showSecurityEdges) {
     for (const edge of graph?.edges ?? []) {
       const sourceNode = nodesById.get(edge.source);
       const targetNode = nodesById.get(edge.target);
@@ -334,8 +336,27 @@ export function TopologyPage() {
   }
 
   const visibleNodes = (graph?.nodes ?? []).filter((node) => visibleIds.has(node.id));
-  const visibleEdges = (graph?.edges ?? []).filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  const filteredEdges = (graph?.edges ?? []).filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  const visibleEdges = filteredEdges.filter((edge) => {
+    if (!showSecurityEdges && ['ALLOWS_FROM', 'ALLOWS_TO', 'ALLOWS_SELF', 'EGRESS_TO'].includes(edge.type)) {
+      return false;
+    }
+    if (!showInferredEdges && edge.type === 'LIKELY_USES') {
+      return false;
+    }
+    return true;
+  });
   const hasFilters = Boolean(search || environment || selectedVpc || activeTypes.length > 0);
+  const securityEdgeCount = filteredEdges.filter((edge) => ['ALLOWS_FROM', 'ALLOWS_TO', 'ALLOWS_SELF', 'EGRESS_TO'].includes(edge.type)).length;
+  const publicExposureCount = filteredEdges.filter((edge) => {
+    if (edge.type !== 'ALLOWS_TO') {
+      return false;
+    }
+    const sourceNode = nodesById.get(edge.source);
+    return sourceNode?.type === 'cidr' && value(sourceNode.data, 'isPublic') === 'true';
+  }).length;
+  const selfReferenceCount = filteredEdges.filter((edge) => edge.type === 'ALLOWS_SELF').length;
+  const inferredLinkCount = filteredEdges.filter((edge) => edge.type === 'LIKELY_USES').length;
 
   const emphasizedIds = new Set<string>();
   if (focusedArn) {
@@ -567,11 +588,71 @@ export function TopologyPage() {
                   setEnvironment('');
                   setSelectedVpc('');
                   setActiveTypes([]);
+                  setShowSecurityEdges(true);
+                  setShowInferredEdges(true);
                 }}
               >
                 Clear filters
               </button>
             ) : null}
+
+            <section className="security-panel">
+              <div className="security-panel-header">
+                <div>
+                  <p className="security-panel-title">Security Lens</p>
+                  <p className="filter-panel-caption">Toggle noisy rule edges without losing the resource map.</p>
+                </div>
+              </div>
+
+              <div className="security-metrics">
+                <div className="security-metric-card">
+                  <span className="security-metric-value">{securityEdgeCount}</span>
+                  <span className="security-metric-label">SG rule edges</span>
+                </div>
+                <div className="security-metric-card danger">
+                  <span className="security-metric-value">{publicExposureCount}</span>
+                  <span className="security-metric-label">Public exposures</span>
+                </div>
+                <div className="security-metric-card">
+                  <span className="security-metric-value">{selfReferenceCount}</span>
+                  <span className="security-metric-label">Self refs</span>
+                </div>
+              </div>
+
+              <div className="security-toggle-list">
+                <button
+                  type="button"
+                  className="type-chip"
+                  data-active={showSecurityEdges}
+                  onClick={() => setShowSecurityEdges((current) => !current)}
+                >
+                  Security flows
+                </button>
+                <button
+                  type="button"
+                  className="type-chip"
+                  data-active={showInferredEdges}
+                  onClick={() => setShowInferredEdges((current) => !current)}
+                >
+                  Inferred DB links ({inferredLinkCount})
+                </button>
+              </div>
+
+              <div className="security-legend">
+                <div className="security-legend-row">
+                  <span className="security-swatch inbound" />
+                  <span>Inbound / public ingress</span>
+                </div>
+                <div className="security-legend-row">
+                  <span className="security-swatch egress" />
+                  <span>Egress / outbound</span>
+                </div>
+                <div className="security-legend-row">
+                  <span className="security-swatch inferred" />
+                  <span>Inferred application-to-database usage</span>
+                </div>
+              </div>
+            </section>
 
             <div className="filter-meta">
               <p>Last collected {graph.metadata.collectedAt ? formatDistanceToNow(new Date(graph.metadata.collectedAt), { addSuffix: true }) : 'unknown'}</p>
