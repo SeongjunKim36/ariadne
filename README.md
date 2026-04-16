@@ -18,7 +18,7 @@ Instead of relying on manually maintained diagrams, Ariadne scans AWS resources,
 - Phase 2 complete: SG rule graph, redaction engine, LLM safety boundary
 - Phase 3 complete: audit engine, NL query, tier labeling, architecture summaries
 - Phase 4 complete: snapshots, timeline diffs, Terraform drift, optional EventBridge + Slack notifications
-- Phase 5 in progress: release readiness, public docs, screenshots, performance hardening
+- Phase 5 almost complete: release readiness, public docs, performance hardening, and demo assets are done; external portfolio repo update is still pending
 
 ## What Ariadne does
 
@@ -99,7 +99,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:5173](http://localhost:5173).
 
 The local Vite server proxies `/api` requests to the backend automatically. If you deploy the frontend and backend on different origins, put them behind the same-origin reverse proxy or configure backend CORS first, then set the API origin explicitly:
 
@@ -121,6 +121,10 @@ VITE_API_BASE_URL=http://localhost:8080 npm run dev
 ### Timeline
 
 ![Timeline diff](docs/assets/screenshots/timeline-diff.png)
+
+## Demo
+
+![Ariadne demo flow](docs/assets/demo/ariadne-demo.gif)
 
 ## Real AWS account setup
 
@@ -216,6 +220,7 @@ npm run test:e2e
 - Product brief: [`docs/ko/project-a-infra-mapper.md`](docs/ko/project-a-infra-mapper.md)
 - Phase checklist: [`docs/ko/specs/phase-checklist.md`](docs/ko/specs/phase-checklist.md)
 - Phase 4 details: [`docs/ko/specs/phase-4-drift-timeline.md`](docs/ko/specs/phase-4-drift-timeline.md)
+- Phase 5 performance notes: [`docs/ko/specs/phase-5-performance.md`](docs/ko/specs/phase-5-performance.md)
 - Real-account case study draft: [`docs/ko/case-study-dongne-v2.md`](docs/ko/case-study-dongne-v2.md)
 
 ## License
