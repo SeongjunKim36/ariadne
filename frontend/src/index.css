@@ -451,6 +451,96 @@ select {
   justify-content: center;
 }
 
+.security-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.security-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.security-panel-title {
+  margin: 0;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.security-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.security-metric-card {
+  display: grid;
+  gap: 2px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.security-metric-card.danger {
+  background: rgba(254, 242, 242, 0.92);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+.security-metric-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.security-metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.security-toggle-list,
+.security-legend {
+  display: grid;
+  gap: 10px;
+}
+
+.security-legend-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: #475569;
+}
+
+.security-swatch {
+  width: 18px;
+  height: 0;
+  border-top: 3px solid #f59e0b;
+  border-radius: 999px;
+}
+
+.security-swatch.inbound {
+  border-top-color: #f59e0b;
+}
+
+.security-swatch.egress {
+  border-top-color: #64748b;
+  border-top-style: dashed;
+}
+
+.security-swatch.inferred {
+  border-top-color: #3b82f6;
+  border-top-style: dashed;
+}
+
 .filter-meta {
   display: grid;
   gap: 4px;
