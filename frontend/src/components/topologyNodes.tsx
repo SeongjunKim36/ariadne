@@ -18,10 +18,20 @@ export type TopologyNodeData = {
   kind: string;
   status?: string;
   detail?: string;
+  tier?: string;
+  tierConfidence?: string;
   selected: boolean;
   faded: boolean;
   accent: 'amber' | 'blue' | 'rose' | 'slate' | 'emerald' | 'violet';
 };
+
+function TierBadge({ tier, confidence }: { tier: string; confidence?: string }) {
+  return (
+    <span className="topology-tier-badge" data-tier={tier} data-confidence={confidence ?? 'auto'}>
+      {tier.replace('-tier', '')}
+    </span>
+  );
+}
 
 function HiddenHandles() {
   return (
@@ -83,6 +93,7 @@ function ResourceNodeCard({ data }: NodeProps<TopologyNodeData>) {
         <p className="topology-node-subtitle">{data.subtitle}</p>
       </div>
       {data.status ? <span className="topology-node-badge">{data.status}</span> : null}
+      {data.tier ? <TierBadge tier={data.tier} confidence={data.tierConfidence} /> : null}
       {data.detail ? <p className="topology-node-detail">{data.detail}</p> : null}
     </div>
   );
@@ -111,6 +122,7 @@ function GroupNodeCard({ data }: NodeProps<TopologyNodeData>) {
         </div>
         {data.status ? <span className="topology-node-badge">{data.status}</span> : null}
       </div>
+      {data.tier ? <TierBadge tier={data.tier} confidence={data.tierConfidence} /> : null}
       {data.detail ? <p className="topology-group-detail">{data.detail}</p> : null}
     </div>
   );

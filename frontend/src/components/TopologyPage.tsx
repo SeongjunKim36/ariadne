@@ -8,11 +8,13 @@ import ReactFlow, {
   ReactFlowProvider,
   type NodeMouseHandler,
 } from 'reactflow';
+import { useSearchParams } from 'react-router-dom';
 import useSWR from 'swr';
 import 'reactflow/dist/style.css';
 
 import {
   fetchGraph,
+  generateLabels,
   fetchLatestScan,
   fetchResourceDetail,
   fetchScanPreflight,
@@ -219,6 +221,7 @@ function DetailPanel({
 
 export function TopologyPage() {
   const nodeTypes = useMemo(() => topologyNodeTypes, []);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: graph, error, isLoading, mutate } = useSWR('graph', fetchGraph, {
     shouldRetryOnError: false,
   });
@@ -233,6 +236,7 @@ export function TopologyPage() {
   const [search, setSearch] = useState('');
   const [environment, setEnvironment] = useState('');
   const [selectedVpc, setSelectedVpc] = useState('');
+  const [selectedTier, setSelectedTier] = useState('');
   const [activeTypes, setActiveTypes] = useState<string[]>([]);
   const [showSecurityEdges, setShowSecurityEdges] = useState(true);
   const [showInferredEdges, setShowInferredEdges] = useState(true);
@@ -240,6 +244,8 @@ export function TopologyPage() {
   const [focusedArn, setFocusedArn] = useState<string | null>(null);
   const [activeScanId, setActiveScanId] = useState<string | null>(null);
   const [scanActionError, setScanActionError] = useState<string | null>(null);
+  const [isGeneratingLabels, setIsGeneratingLabels] = useState(false);
+  const [labelActionMessage, setLabelActionMessage] = useState<string | null>(null);
 
   const deferredSearch = useDeferredValue(search);
   const { data: resourceDetail } = useSWR(
@@ -258,6 +264,12 @@ export function TopologyPage() {
   );
   const currentScan = polledScan ?? latestScan;
   const scanIsRunning = currentScan?.status === 'RUNNING';
+  const focusFromUrl = searchParams.get('focus');
+  const relatedFromUrl = searchParams.get('related');
+  const relatedIds = useMemo(
+    () => (relatedFromUrl ? relatedFromUrl.split(',').map((entry) => entry.trim()).filter(Boolean) : []),
+    [relatedFromUrl],
+  );
 
   useEffect(() => {
     if (latestScan?.status === 'RUNNING') {
@@ -277,6 +289,14 @@ export function TopologyPage() {
     }
   }, [polledScan, mutateLatestScan, mutate]);
 
+  useEffect(() => {
+    if (!focusFromUrl) {
+      return;
+    }
+    setSelectedArn(focusFromUrl);
+    setFocusedArn(focusFromUrl);
+  }, [focusFromUrl]);
+
   const nodesById = new Map((graph?.nodes ?? []).map((node) => [node.id, node]));
   const neighborsById = new Map<string, Set<string>>();
   for (const edge of graph?.edges ?? []) {
@@ -294,6 +314,11 @@ export function TopologyPage() {
       .map((node) => value(node.data, 'environment'))
       .filter(Boolean),
   )).sort();
+  const tierOptions = Array.from(new Set(
+    (graph?.nodes ?? [])
+      .map((node) => value(node.data, 'tier'))
+      .filter(Boolean),
+  )).sort();
   const vpcOptions = (graph?.nodes ?? [])
     .filter((node) => node.type === 'vpc-group')
     .map((node) => ({
@@ -305,8 +330,9 @@ export function TopologyPage() {
     const typeMatch = activeTypes.length === 0 || activeTypes.includes(node.type);
     const envMatch = !environment || value(node.data, 'environment') === environment;
     const vpcMatch = belongsToVpc(node, selectedVpc, nodesById, neighborsById);
+    const tierMatch = !selectedTier || value(node.data, 'tier') === selectedTier;
     const searchMatch = matchesSearch(node, deferredSearch);
-    return typeMatch && envMatch && vpcMatch && searchMatch;
+    return typeMatch && envMatch && vpcMatch && tierMatch && searchMatch;
   });
 
   const visibleIds = new Set<string>();
@@ -346,7 +372,7 @@ export function TopologyPage() {
     }
     return true;
   });
-  const hasFilters = Boolean(search || environment || selectedVpc || activeTypes.length > 0);
+  const hasFilters = Boolean(search || environment || selectedVpc || selectedTier || activeTypes.length > 0);
   const securityEdgeCount = filteredEdges.filter((edge) => ['ALLOWS_FROM', 'ALLOWS_TO', 'ALLOWS_SELF', 'EGRESS_TO'].includes(edge.type)).length;
   const publicExposureCount = filteredEdges.filter((edge) => {
     if (edge.type !== 'ALLOWS_TO') {
@@ -377,6 +403,12 @@ export function TopologyPage() {
       }
     }
   }
+  for (const relatedId of relatedIds) {
+    emphasizedIds.add(relatedId);
+    for (const ancestorId of collectAncestorIds(relatedId, nodesById)) {
+      emphasizedIds.add(ancestorId);
+    }
+  }
 
   useEffect(() => {
     if (selectedArn && !visibleIds.has(selectedArn)) {
@@ -392,10 +424,27 @@ export function TopologyPage() {
 
   const onNodeClick: NodeMouseHandler = (_, node) => {
     setSelectedArn(node.id);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('focus', node.id);
+      next.delete('related');
+      return next;
+    }, { replace: true });
   };
 
   const onNodeDoubleClick: NodeMouseHandler = (_, node) => {
-    setFocusedArn((current) => (current === node.id ? null : node.id));
+    const nextFocused = focusedArn === node.id ? null : node.id;
+    setFocusedArn(nextFocused);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextFocused == null) {
+        next.delete('focus');
+      } else {
+        next.set('focus', nextFocused);
+      }
+      next.delete('related');
+      return next;
+    }, { replace: true });
   };
 
   const toggleType = (type: string) => {
@@ -422,6 +471,23 @@ export function TopologyPage() {
         ? scanError.message
         : 'A new scan could not be started.';
       setScanActionError(message);
+    }
+  };
+
+  const generateTierLabels = async () => {
+    setIsGeneratingLabels(true);
+    setLabelActionMessage(null);
+    try {
+      const labels = await generateLabels();
+      await mutate();
+      setLabelActionMessage(`${labels.length} tier labels are now available.`);
+    } catch (labelError) {
+      const message = labelError instanceof Error
+        ? labelError.message
+        : 'Tier labels could not be generated.';
+      setLabelActionMessage(message);
+    } finally {
+      setIsGeneratingLabels(false);
     }
   };
 
@@ -458,6 +524,10 @@ export function TopologyPage() {
           <div className="toolbar-actions">
             <button type="button" className="ghost-button" onClick={() => mutate()}>
               Refresh graph
+            </button>
+            <button type="button" className="ghost-button" onClick={() => void generateTierLabels()} disabled={isGeneratingLabels}>
+              {isGeneratingLabels ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}
+              {isGeneratingLabels ? 'Generating tiers…' : 'Generate tiers'}
             </button>
             <button
               type="button"
@@ -529,6 +599,12 @@ export function TopologyPage() {
                 <span>{scanPreflight.warningMessage}</span>
               </div>
             ) : null}
+            {labelActionMessage ? (
+              <div className="scan-callout" data-tone="warn">
+                <Sparkles size={16} />
+                <span>{labelActionMessage}</span>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -562,6 +638,16 @@ export function TopologyPage() {
               </select>
             </label>
 
+            <label className="field">
+              <span>Tier</span>
+              <select value={selectedTier} onChange={(event) => setSelectedTier(event.target.value)}>
+                <option value="">All tiers</option>
+                {tierOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
             <div className="type-list">
               {allTypes.map((type) => {
                 const active = activeTypes.length === 0 || activeTypes.includes(type);
@@ -587,6 +673,7 @@ export function TopologyPage() {
                   setSearch('');
                   setEnvironment('');
                   setSelectedVpc('');
+                  setSelectedTier('');
                   setActiveTypes([]);
                   setShowSecurityEdges(true);
                   setShowInferredEdges(true);
@@ -718,11 +805,20 @@ export function TopologyPage() {
             </ReactFlowProvider>
           </div>
 
-          <DetailPanel
-            resourceDetail={resourceDetail}
-            fallbackNode={fallbackNode}
-            onClose={() => setSelectedArn(null)}
-          />
+            <DetailPanel
+              resourceDetail={resourceDetail}
+              fallbackNode={fallbackNode}
+              onClose={() => {
+                setSelectedArn(null);
+                setFocusedArn(null);
+                setSearchParams((current) => {
+                  const next = new URLSearchParams(current);
+                  next.delete('focus');
+                  next.delete('related');
+                  return next;
+                }, { replace: true });
+              }}
+            />
         </div>
       </section>
     </div>

@@ -4,6 +4,8 @@ import { Activity, Bot, Network, ScrollText, TimerReset, TriangleAlert } from 'l
 import useSWR from 'swr';
 
 import { fetchLatestScan } from './lib/api';
+import { AuditPage } from './components/AuditPage';
+import { QueryPage } from './components/QueryPage';
 import { TopologyPage } from './components/TopologyPage';
 
 function PlaceholderPage({
@@ -98,16 +100,7 @@ function Shell() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<TopologyPage />} />
-          <Route
-            path="/audit"
-            element={
-              <PlaceholderPage
-                icon={Activity}
-                title="Audit rules arrive in Phase 3"
-                copy="The graph is ready for risk overlays once SG and IAM rule engines land."
-              />
-            }
-          />
+          <Route path="/audit" element={<AuditPage />} />
           <Route
             path="/timeline"
             element={
@@ -120,13 +113,7 @@ function Shell() {
           />
           <Route
             path="/query"
-            element={
-              <PlaceholderPage
-                icon={Bot}
-                title="Natural language query is staged next"
-                copy="Phase 3 will translate operator questions into graph-aware answers."
-              />
-            }
+            element={<QueryPage />}
           />
         </Routes>
       </main>
