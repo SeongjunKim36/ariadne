@@ -159,7 +159,8 @@ class SecurityGroupRuleGraphIntegrationTest {
         GraphResponse graph = graphQueryService.fetchGraph(
                 "prod",
                 Set.of("VPC", "SECURITY_GROUP", "CIDR_SOURCE"),
-                vpcId
+                vpcId,
+                null
         );
 
         var nodesByName = graph.nodes().stream()

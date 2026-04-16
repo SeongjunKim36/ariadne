@@ -111,7 +111,7 @@ class Phase1QuestionValidationIntegrationTest {
         );
         scanRunRepository.save(scanRun);
 
-        var prodGraph = graphQueryService.fetchGraph("prod", Set.of(), "vpc-1234");
+        var prodGraph = graphQueryService.fetchGraph("prod", Set.of(), "vpc-1234", null);
         var names = prodGraph.nodes().stream()
                 .map(node -> String.valueOf(node.data().get("name")))
                 .collect(Collectors.toSet());
