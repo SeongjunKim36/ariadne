@@ -143,3 +143,116 @@ export type ArchitectureSummaryResponse = {
   language: string;
   generatedAt: string;
 };
+
+export type SnapshotSummaryResponse = {
+  id: number;
+  capturedAt: string;
+  accountId: string;
+  region: string;
+  nodeCount: number;
+  edgeCount: number;
+  scanDurationMs: number;
+  triggerSource: string;
+  scanId: string | null;
+};
+
+export type PropertyChangeResponse = {
+  beforeValue: unknown;
+  afterValue: unknown;
+};
+
+export type NodeDiffResponse = {
+  arn: string | null;
+  name: string | null;
+  resourceType: string | null;
+  changeType: 'ADDED' | 'REMOVED' | 'MODIFIED';
+  beforeData: Record<string, unknown>;
+  afterData: Record<string, unknown>;
+  propertyChanges: Record<string, PropertyChangeResponse>;
+};
+
+export type EdgeDiffResponse = {
+  edgeId: string;
+  sourceArn: string;
+  targetArn: string;
+  relationshipType: string;
+  changeType: 'ADDED' | 'REMOVED' | 'MODIFIED';
+  beforeData: Record<string, unknown>;
+  afterData: Record<string, unknown>;
+  propertyChanges: Record<string, PropertyChangeResponse>;
+};
+
+export type SnapshotResponse = {
+  snapshot: SnapshotSummaryResponse;
+  graph: GraphResponse;
+  metadata: Record<string, unknown>;
+};
+
+export type SnapshotDiffResponse = {
+  id: number;
+  diffedAt: string;
+  baseSnapshot: SnapshotSummaryResponse;
+  targetSnapshot: SnapshotSummaryResponse;
+  totalChanges: number;
+  addedCount: number;
+  removedCount: number;
+  modifiedCount: number;
+  addedNodes: NodeDiffResponse[];
+  removedNodes: NodeDiffResponse[];
+  modifiedNodes: NodeDiffResponse[];
+  addedEdges: EdgeDiffResponse[];
+  removedEdges: EdgeDiffResponse[];
+  modifiedEdges: EdgeDiffResponse[];
+};
+
+export type TimelineEntryResponse = {
+  snapshotId: number;
+  capturedAt: string;
+  baseSnapshotId: number | null;
+  totalChanges: number;
+  addedCount: number;
+  removedCount: number;
+  modifiedCount: number;
+  triggerSource: string;
+  nodeCount: number;
+  edgeCount: number;
+};
+
+export type DriftItemResponse = {
+  status: 'MISSING' | 'MODIFIED' | 'UNMANAGED';
+  terraformAddress: string | null;
+  resourceType: string | null;
+  arn: string | null;
+  resourceId: string | null;
+  name: string | null;
+  summary: string;
+  desiredData: Record<string, unknown>;
+  actualData: Record<string, unknown>;
+  propertyChanges: Record<string, PropertyChangeResponse>;
+};
+
+export type DriftReportResponse = {
+  id: number;
+  generatedAt: string;
+  sourceKind: string;
+  sourceName: string;
+  totalItems: number;
+  missingCount: number;
+  modifiedCount: number;
+  unmanagedCount: number;
+  items: DriftItemResponse[];
+};
+
+export type EventLogResponse = {
+  id: number;
+  receivedAt: string;
+  eventTime: string | null;
+  eventId: string | null;
+  source: string;
+  detailType: string;
+  resourceArn: string | null;
+  resourceType: string | null;
+  action: string | null;
+  status: string;
+  message: string | null;
+};

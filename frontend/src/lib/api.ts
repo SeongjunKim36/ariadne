@@ -6,12 +6,18 @@ import type {
   AuditFinding,
   AuditReportResponse,
   AuditRuleResponse,
+  DriftReportResponse,
+  EventLogResponse,
   GraphResponse,
   LabelResponse,
   NlQueryResponse,
   ResourceDetailResponse,
   ScanPreflightResponse,
   ScanStatusResponse,
+  SnapshotDiffResponse,
+  SnapshotResponse,
+  SnapshotSummaryResponse,
+  TimelineEntryResponse,
 } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -23,6 +29,81 @@ const apiClient = axios.create({
 
 export async function fetchGraph(): Promise<GraphResponse> {
   const response = await apiClient.get<GraphResponse>('/api/graph');
+  return response.data;
+}
+
+export async function fetchSnapshots(
+  period = '24h',
+  range?: { from?: string; to?: string },
+): Promise<SnapshotSummaryResponse[]> {
+  const response = await apiClient.get<SnapshotSummaryResponse[]>('/api/snapshots', {
+    params: {
+      ...(period && period !== 'custom' ? { period } : {}),
+      ...(range?.from ? { from: range.from } : {}),
+      ...(range?.to ? { to: range.to } : {}),
+    },
+  });
+  return response.data;
+}
+
+export async function fetchSnapshot(snapshotId: number): Promise<SnapshotResponse> {
+  const response = await apiClient.get<SnapshotResponse>(`/api/snapshots/${snapshotId}`);
+  return response.data;
+}
+
+export async function fetchSnapshotDiff(from: number, to: number): Promise<SnapshotDiffResponse> {
+  const response = await apiClient.get<SnapshotDiffResponse>('/api/snapshots/diff', {
+    params: { from, to },
+  });
+  return response.data;
+}
+
+export async function fetchLatestSnapshotDiff(): Promise<SnapshotDiffResponse | null> {
+  const response = await apiClient.get<SnapshotDiffResponse>('/api/snapshots/diff/latest', {
+    validateStatus: (status) => status === 200 || status === 204,
+  });
+  if (response.status === 204) {
+    return null;
+  }
+  return response.data;
+}
+
+export async function fetchTimeline(
+  period = '24h',
+  range?: { from?: string; to?: string },
+): Promise<TimelineEntryResponse[]> {
+  const response = await apiClient.get<TimelineEntryResponse[]>('/api/timeline', {
+    params: {
+      ...(period && period !== 'custom' ? { period } : {}),
+      ...(range?.from ? { from: range.from } : {}),
+      ...(range?.to ? { to: range.to } : {}),
+    },
+  });
+  return response.data;
+}
+
+export async function runTerraformDrift(payload?: { path?: string; rawStateJson?: string }): Promise<DriftReportResponse> {
+  const response = await apiClient.post<DriftReportResponse>('/api/drift/terraform', payload ?? {});
+  return response.data;
+}
+
+export async function fetchLatestTerraformDrift(): Promise<DriftReportResponse | null> {
+  const response = await apiClient.get<DriftReportResponse>('/api/drift/latest', {
+    validateStatus: (status) => status === 200 || status === 204,
+  });
+  if (response.status === 204) {
+    return null;
+  }
+  return response.data;
+}
+
+export async function fetchEventLogs(range?: { from?: string; to?: string }): Promise<EventLogResponse[]> {
+  const response = await apiClient.get<EventLogResponse[]>('/api/events', {
+    params: {
+      ...(range?.from ? { from: range.from } : {}),
+      ...(range?.to ? { to: range.to } : {}),
+    },
+  });
   return response.data;
 }
 
