@@ -47,6 +47,7 @@ dependencies {
     implementation("software.amazon.awssdk:ssm")
     implementation("software.amazon.awssdk:iam")
     implementation("software.amazon.awssdk:sts")
+    implementation("software.amazon.awssdk:sqs")
 
     // Database
     runtimeOnly("org.postgresql:postgresql")

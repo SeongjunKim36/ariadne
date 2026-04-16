@@ -29,6 +29,25 @@ aws:
 ariadne:
   scan:
     schedule: "0 0 * * * *"  # every hour
+  snapshot:
+    schedule: "0 5 * * * *"
+    retention:
+      hourly: 48
+      daily: 30
+      weekly: 12
+      max-storage-gb: 5
+  terraform:
+    state-path: ${ARIADNE_TERRAFORM_STATE_PATH:}
+  eventbridge:
+    enabled: false
+    queue-url: ${ARIADNE_EVENTBRIDGE_QUEUE_URL:}
+    schedule: "0 * * * * *"
+    poll-interval-seconds: 60
+    max-messages: 5
+  notifications:
+    slack:
+      enabled: false
+      webhook-url: ${ARIADNE_SLACK_WEBHOOK_URL:}
   llm:
     api-key: ${CLAUDE_API_KEY:}
     default-model: claude-sonnet-4-6-20250514
