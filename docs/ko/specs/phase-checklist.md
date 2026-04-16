@@ -69,7 +69,7 @@
 | 1-20 | GET /api/resources?arn= + GET /api/resources?resourceId= | [x] | 2026-04-14 | ResourceController + ResourceQueryService 추가 |
 | 1-21 | 최소 happy-path 통합 테스트 (Testcontainers + LocalStack) | [x] | 2026-04-13 | VPC/Subnet/SG/EC2 LocalStack 스캔 검증 |
 
-### Week 4: 프론��엔드
+### Week 4: 프론트엔드
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
@@ -165,49 +165,49 @@
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 3-1 | AuditRule 인터페이스 | [ ] | | |
-| 3-2 | SG 규칙 8개 구현 (SG-001~008) | [ ] | | |
-| 3-3 | IAM 규칙 7개 구현 (IAM-001~007) | [ ] | | |
-| 3-4 | Network 규칙 4개 구현 (NET-001~004) | [ ] | | |
-| 3-5 | S3 규칙 3개 + Encryption 규칙 3개 (S3-001~003, ENC-001~003) | [ ] | | |
-| 3-6 | AuditEngine — 전체 감사 실행 | [ ] | | |
-| 3-7 | 감사 API (run, latest, findings, rules) | [ ] | | |
-| 3-8 | 감사 대���보드 UI (카드 + 카테고리 탭 + finding 목록) | [ ] | | |
-| 3-9 | finding 클릭 → 토폴로지 하이라이트 연동 | [ ] | | |
+| 3-1 | AuditRule 인터페이스 | [x] | 2026-04-16 | `AuditRule`, `CypherAuditRule`, `RootAccessKeyAuditRule` 추가 |
+| 3-2 | SG 규칙 8개 구현 (SG-001~008) | [x] | 2026-04-16 | 인터넷 전체 오픈, SSH/RDP/DB 포트, 과도한 CIDR, egress all, 미사용 SG, 과다 규칙 포함 |
+| 3-3 | IAM 규칙 7개 구현 (IAM-001~007) | [x] | 2026-04-16 | wildcard action/resource, cross-account assume, root access key, admin access 등 |
+| 3-4 | Network 규칙 4개 구현 (NET-001~004) | [x] | 2026-04-16 | public RDS, public EC2 + 넓은 SG, HTTPS 없는 ALB, public subnet 과다 노출 점검 |
+| 3-5 | S3 규칙 3개 + Encryption 규칙 3개 (S3-001~003, ENC-001~003) | [x] | 2026-04-16 | public access block, bucket policy public, SSL 미강제, 암호화 미적용 등 |
+| 3-6 | AuditEngine — 전체 감사 실행 | [x] | 2026-04-16 | `AuditRun`/`AuditFinding` 저장 + 최신 보고서/필터링 조회 지원 |
+| 3-7 | 감사 API (run, latest, findings, rules) | [x] | 2026-04-16 | `/api/audit/run`, `/latest`, `/findings`, `/rules`, `/explain` 구현 |
+| 3-8 | 감사 대시보드 UI (카드 + 카테고리 탭 + finding 목록) | [x] | 2026-04-16 | `AuditPage` 실구현, 위험도/카테고리 탭과 요약 카드 추가 |
+| 3-9 | finding 클릭 → 토폴로지 하이라이트 연동 | [x] | 2026-04-16 | 감사 결과에서 topology focus + related resource 강조 연동 |
 
 ### Week 2: NL Query 기반
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 3-10 | ClaudeClient Spring 서비스 | [ ] | | |
-| 3-11 | LlmGateway + Circuit Breaker + 일일 비용 추적 | [ ] | | |
-| 3-12 | SchemaContextBuilder (Neo4j 실 스키마 추출) | [ ] | | |
-| 3-13 | CypherValidator (레이블+관계+프로퍼티 화이트리스트 + EXPLAIN) | [ ] | | |
-| 3-14 | NlQueryService (생성→검증→실행 파이프라인) | [ ] | | |
-| 3-15 | 빈 결과 / 모호한 질의 / 대량 결�� 처리 | [ ] | | |
-| 3-16 | TierLabeler 규칙 기반 레이블링 | [ ] | | |
+| 3-10 | ClaudeClient Spring 서비스 | [x] | 2026-04-16 | Anthropic Messages API 기반 `ClaudeClient` 구현, `CLAUDE_API_KEY` 미설정 시 fail-fast |
+| 3-11 | LlmGateway + Circuit Breaker + 일일 비용 추적 | [x] | 2026-04-16 | retry/backoff, circuit breaker, daily budget guard, LLM audit log 연동 |
+| 3-12 | SchemaContextBuilder (Neo4j 실 스키마 추출) | [x] | 2026-04-16 | 레이블/관계/프로퍼티 allowlist를 실스키마에서 조립 |
+| 3-13 | CypherValidator (레이블+관계+프로퍼티 화이트리스트 + EXPLAIN) | [x] | 2026-04-16 | read-only 강제, write keyword 차단, `EXPLAIN` 검증과 property regex 보정 |
+| 3-14 | NlQueryService (생성→검증→실행 파이프라인) | [x] | 2026-04-16 | 템플릿 우선, LLM 생성/재시도, safe execution, 설명/서브그래프 반환 |
+| 3-15 | 빈 결과 / 모호한 질의 / 대량 결과 처리 | [x] | 2026-04-16 | suggestions, clarification 옵션, limit/truncation, 환경 태그 부재 설명 처리 |
+| 3-16 | TierLabeler 규칙 기반 레이블링 | [x] | 2026-04-16 | web/app/db/network/storage/batch tier rule 기반 라벨링 구현 |
 
 ### Week 3: LLM 완성
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 3-17 | NL Query UI (검색 바 + 예시 + 결과 + 서브그래프) | [ ] | | |
-| 3-18 | LLM 레이블링 (미분류 보조 + confidence 기반) | [ ] | | |
-| 3-19 | LlmAuditAssistant (감사 결과 설명 + 우선순위) | [ ] | | |
-| 3-20 | 아키텍처 요약 생성기 (한국어/영어) | [ ] | | |
-| 3-21 | 계층 레이블 시각화 (TierBadge + 필터) | [ ] | | |
-| 3-22 | LLM fallback (실패 시 규칙/템플릿 응답) | [ ] | | |
+| 3-17 | NL Query UI (검색 바 + 예시 + 결과 + 서브그래프) | [x] | 2026-04-16 | `QueryPage` 실구현, 예시 질의/결과 목록/서브그래프/생성 Cypher 표시 |
+| 3-18 | LLM 레이블링 (미분류 보조 + confidence 기반) | [x] | 2026-04-16 | 규칙 라벨 후 미분류 노드만 LLM 보조 레이블링, confidence/source 저장 |
+| 3-19 | LlmAuditAssistant (감사 결과 설명 + 우선순위) | [x] | 2026-04-16 | 감사 보고서 요약/우선순위/행동 제안 생성, 실패 시 규칙 기반 fallback |
+| 3-20 | 아키텍처 요약 생성기 (한국어/영어) | [x] | 2026-04-16 | `/api/summary/generate?lang=ko|en` 구현 및 실계정 요약 생성 확인 |
+| 3-21 | 계층 레이블 시각화 (TierBadge + 필터) | [x] | 2026-04-16 | topology/query/subgraph에 tier badge 표시, tier filter 및 재생성 액션 추가 |
+| 3-22 | LLM fallback (실패 시 규칙/템플릿 응답) | [x] | 2026-04-16 | query/audit/summary 모두 규칙/템플릿 fallback과 fail-closed 경로 보강 |
 
 ### Week 4 (버퍼): 통합 + 안정화
 
 | # | 항목 | 상태 | 완료일 | 비고 |
 |---|---|---|---|---|
-| 3-23 | dongne-v2 실데이터 NL Query 정확도 테스트 | [ ] | | |
-| 3-24 | 프롬프트 튜닝 (실 질의 패턴 기반) | [ ] | | |
-| 3-25 | "prod vs staging 차이가 뭐야?" 답변 가능 확인 | [ ] | | 5대 질문 #3 |
-| 3-26 | "0.0.0.0/0으로 열린 SG 중 위험한 거?" 답변 가능 확인 | [ ] | | 5대 질문 #4 |
+| 3-23 | dongne-v2 실데이터 NL Query 정확도 테스트 | [x] | 2026-04-16 | `AWS_PROFILE=ariadne` 실계정 기준 scan + query 검증, SG 질의 11건 반환 및 서브그래프 확인 |
+| 3-24 | 프롬프트 튜닝 (실 질의 패턴 기반) | [x] | 2026-04-16 | template examples 확장, validator feedback 재시도, empty-result 설명 보강 |
+| 3-25 | "prod vs staging 차이가 뭐야?" 답변 가능 확인 | [x] | 2026-04-16 | 실계정에서 환경 태그 부재 시 비교 불가 사유를 설명하는 안전한 답변 반환 확인 |
+| 3-26 | "0.0.0.0/0으로 열린 SG 중 위험한 거?" 답변 가능 확인 | [x] | 2026-04-16 | 실계정에서 11개 SG 반환, generated Cypher/설명/서브그래프 동시 확인 |
 
-**Phase 3 진행률**: 0/26 (0%)
+**Phase 3 진행률**: 26/26 (100%) — 종료
 
 ---
 
