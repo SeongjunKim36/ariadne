@@ -18,7 +18,7 @@ Instead of relying on manually maintained diagrams, Ariadne scans AWS resources,
 - Phase 2 complete: SG rule graph, redaction engine, LLM safety boundary
 - Phase 3 complete: audit engine, NL query, tier labeling, architecture summaries
 - Phase 4 complete: snapshots, timeline diffs, Terraform drift, optional EventBridge + Slack notifications
-- Phase 5 almost complete: release readiness, public docs, performance hardening, and demo assets are done; external portfolio repo update is still pending
+- Phase 5 complete: release readiness, public docs, performance hardening, demo assets, and portfolio handoff
 
 ## What Ariadne does
 
