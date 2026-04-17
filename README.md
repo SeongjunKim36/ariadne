@@ -87,14 +87,14 @@ docker compose -f docker-compose.dev.yml up -d
 ### 2. Start the backend
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/backend
+cd backend
 ./gradlew bootRun
 ```
 
 ### 3. Start the frontend
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -104,7 +104,7 @@ Open [http://localhost:5173](http://localhost:5173).
 The local Vite server proxies `/api` requests to the backend automatically. If you deploy the frontend and backend on different origins, put them behind the same-origin reverse proxy or configure backend CORS first, then set the API origin explicitly:
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/frontend
+cd frontend
 VITE_API_BASE_URL=http://localhost:8080 npm run dev
 ```
 
@@ -197,21 +197,21 @@ The differentiator is the combination: live AWS graph + explainable UI + guarded
 Backend:
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/backend
+cd backend
 ./gradlew test
 ```
 
 Frontend build:
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/frontend
+cd frontend
 npm run build
 ```
 
 Frontend E2E:
 
 ```bash
-cd /Users/skl-wade/Wade/ariadne/frontend
+cd frontend
 npm run test:e2e
 ```
 
