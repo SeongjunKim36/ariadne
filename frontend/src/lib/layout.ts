@@ -3,6 +3,7 @@ import type { Edge, Node } from 'reactflow';
 
 import type { GraphEdgeRecord, GraphNodeRecord } from './types';
 import type { TopologyNodeData } from '../components/topologyNodes';
+import { formatRiskLabel, labelEdgeType } from './uiCopy';
 
 const GROUP_MIN_WIDTH = 320;
 const GROUP_MIN_HEIGHT = 210;
@@ -79,13 +80,21 @@ function value(record: Record<string, unknown>, key: string) {
     : '';
 }
 
+function displayLabel(node: GraphNodeRecord) {
+  const resolved = value(node.data, 'name') || value(node.data, 'resourceId') || node.id;
+  return resolved === 'Public Internet' ? '공용 인터넷' : resolved;
+}
+
 function describeNode(node: GraphNodeRecord) {
   const { data } = node;
   switch (node.type) {
     case 'cidr':
       return {
         subtitle: value(data, 'cidr') || value(data, 'resourceId'),
-        detail: [value(data, 'label'), value(data, 'riskLevel')].filter(Boolean).join(' · '),
+        detail: [
+          value(data, 'label') === 'Public Internet' ? '공용 인터넷' : value(data, 'label'),
+          formatRiskLabel(value(data, 'riskLevel')),
+        ].filter(Boolean).join(' · '),
         status: value(data, 'addressFamily') || (value(data, 'isPublic') === 'true' ? 'public' : ''),
       };
     case 'ec2':
@@ -103,14 +112,14 @@ function describeNode(node: GraphNodeRecord) {
     case 'sg':
       return {
         subtitle: value(data, 'groupId') || value(data, 'resourceId'),
-        detail: `${value(data, 'inboundRuleCount') || '0'} in · ${value(data, 'outboundRuleCount') || '0'} out`,
+        detail: `인바운드 ${value(data, 'inboundRuleCount') || '0'} · 아웃바운드 ${value(data, 'outboundRuleCount') || '0'}`,
         status: '',
       };
     case 'iam-role': {
       const attachedPolicies = Array.isArray(data.attachedPolicies) ? data.attachedPolicies.length : 0;
       return {
         subtitle: value(data, 'roleName') || value(data, 'resourceId'),
-        detail: attachedPolicies > 0 ? `${attachedPolicies} policies` : 'trust policy linked',
+        detail: attachedPolicies > 0 ? `정책 ${attachedPolicies}개` : '신뢰 정책 연결',
         status: value(data, 'environment'),
       };
     }
@@ -124,8 +133,8 @@ function describeNode(node: GraphNodeRecord) {
       return {
         subtitle: value(data, 'resourceId'),
         detail: [
-          value(data, 'activeServiceCount') ? `${value(data, 'activeServiceCount')} svc` : '',
-          value(data, 'runningTaskCount') ? `${value(data, 'runningTaskCount')} tasks` : '',
+          value(data, 'activeServiceCount') ? `서비스 ${value(data, 'activeServiceCount')}개` : '',
+          value(data, 'runningTaskCount') ? `태스크 ${value(data, 'runningTaskCount')}개` : '',
         ].filter(Boolean).join(' · '),
         status: value(data, 'status'),
       };
@@ -143,7 +152,7 @@ function describeNode(node: GraphNodeRecord) {
         subtitle: value(data, 'resourceId'),
         detail: [
           value(data, 'encryptionType'),
-          value(data, 'versioningEnabled') === 'true' ? 'versioned' : 'unversioned',
+          value(data, 'versioningEnabled') === 'true' ? '버전 관리 켜짐' : '버전 관리 꺼짐',
         ].filter(Boolean).join(' · '),
         status: value(data, 'publicAccessBlocked') === 'true' ? 'blocked' : 'check public',
       };
@@ -156,7 +165,7 @@ function describeNode(node: GraphNodeRecord) {
     case 'route53':
       return {
         subtitle: value(data, 'domainName') || value(data, 'resourceId'),
-        detail: `${value(data, 'recordCount') || '0'} records`,
+        detail: `레코드 ${value(data, 'recordCount') || '0'}개`,
         status: value(data, 'isPrivate') === 'true' ? 'private' : 'public',
       };
     case 'vpc-group':
@@ -326,7 +335,7 @@ function buildLeafLayout(
       selectable: true,
       style: { width: size.width, height: size.height, border: 'none', background: 'transparent' },
       data: {
-        label: value(node.data, 'name') || value(node.data, 'resourceId') || node.id,
+        label: displayLabel(node),
         subtitle: description.subtitle,
         detail: description.detail,
         status: description.status,
@@ -403,7 +412,7 @@ function layoutGroup(
     selectable: true,
     style: { width, height, border: 'none', background: 'transparent' },
     data: {
-      label: value(groupNode.data, 'name') || value(groupNode.data, 'resourceId') || groupNode.id,
+      label: displayLabel(groupNode),
       subtitle: description.subtitle,
       detail: description.detail,
       status: description.status,
@@ -487,7 +496,7 @@ export function buildTopologyElements(
       type: 'smoothstep',
       animated: visual.animated,
       data: edge.data,
-      label: edge.type,
+      label: labelEdgeType(edge.type),
       style: {
         stroke: visual.stroke,
         strokeWidth: visual.strokeWidth,

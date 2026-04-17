@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 
+import { formatNodeStatus, labelTierBadge } from '../lib/uiCopy';
+
 export type TopologyNodeData = {
   label: string;
   subtitle: string;
@@ -28,7 +30,7 @@ export type TopologyNodeData = {
 function TierBadge({ tier, confidence }: { tier: string; confidence?: string }) {
   return (
     <span className="topology-tier-badge" data-tier={tier} data-confidence={confidence ?? 'auto'}>
-      {tier.replace('-tier', '')}
+      {labelTierBadge(tier)}
     </span>
   );
 }
@@ -92,7 +94,7 @@ function ResourceNodeCard({ data }: NodeProps<TopologyNodeData>) {
         <p className="topology-node-label">{data.label}</p>
         <p className="topology-node-subtitle">{data.subtitle}</p>
       </div>
-      {data.status ? <span className="topology-node-badge">{data.status}</span> : null}
+      {data.status ? <span className="topology-node-badge">{formatNodeStatus(data.status)}</span> : null}
       {data.tier ? <TierBadge tier={data.tier} confidence={data.tierConfidence} /> : null}
       {data.detail ? <p className="topology-node-detail">{data.detail}</p> : null}
     </div>
@@ -120,7 +122,7 @@ function GroupNodeCard({ data }: NodeProps<TopologyNodeData>) {
             <p className="topology-group-subtitle">{data.subtitle}</p>
           </div>
         </div>
-        {data.status ? <span className="topology-node-badge">{data.status}</span> : null}
+        {data.status ? <span className="topology-node-badge">{formatNodeStatus(data.status)}</span> : null}
       </div>
       {data.tier ? <TierBadge tier={data.tier} confidence={data.tierConfidence} /> : null}
       {data.detail ? <p className="topology-group-detail">{data.detail}</p> : null}

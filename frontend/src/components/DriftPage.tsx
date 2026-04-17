@@ -20,24 +20,24 @@ function DriftBucket({
       <div className="drift-bucket-header">
         <div>
           <p className="drift-bucket-title">{title}</p>
-          <p className="drift-bucket-copy">{items.length} items</p>
+          <p className="drift-bucket-copy">{items.length}개 항목</p>
         </div>
       </div>
 
       {items.length === 0 ? (
-        <div className="drift-empty-card">No items in this category.</div>
+        <div className="drift-empty-card">이 범주에는 항목이 없습니다.</div>
       ) : (
         <div className="drift-item-list">
           {items.map((item) => (
             <article key={`${title}-${item.terraformAddress ?? item.arn ?? item.name}`} className="drift-item-card" data-status={item.status.toLowerCase()}>
               <div className="drift-item-head">
                 <div>
-                  <p className="drift-item-title">{item.name ?? item.terraformAddress ?? item.resourceId ?? 'Unnamed item'}</p>
-                  <p className="drift-item-meta">{item.resourceType ?? 'UNKNOWN'} · {item.status}</p>
+                  <p className="drift-item-title">{item.name ?? item.terraformAddress ?? item.resourceId ?? '이름 없는 항목'}</p>
+                  <p className="drift-item-meta">{item.resourceType ?? '알 수 없음'} · {item.status}</p>
                 </div>
                 {item.arn ? (
                   <button type="button" className="timeline-link-button" onClick={() => onOpenTopology(item.arn!)}>
-                    <span>Topology</span>
+                    <span>인프라 맵</span>
                     <ArrowRight size={14} />
                   </button>
                 ) : null}
@@ -94,7 +94,7 @@ export function DriftPage() {
       );
       await mutate(report, { revalidate: false });
     } catch (error) {
-      setRunError(error instanceof Error ? error.message : 'Failed to run Terraform drift detection');
+      setRunError(error instanceof Error ? error.message : 'Terraform 드리프트 탐지에 실패했습니다.');
     } finally {
       setIsRunning(false);
     }
@@ -108,15 +108,15 @@ export function DriftPage() {
     <div className="drift-page">
       <section className="drift-hero">
         <div>
-          <p className="timeline-eyebrow">Phase 4 Drift</p>
-          <h2>Terraform state versus the live graph</h2>
+          <p className="timeline-eyebrow">Terraform 드리프트</p>
+          <h2>Terraform 상태와 실제 그래프 비교</h2>
           <p className="timeline-copy">
-            Feed in a state file path or raw state JSON and Ariadne will compare it with the latest graph snapshot.
+            상태 파일 경로나 raw state JSON을 입력하면 최신 그래프 스냅샷과 나란히 비교합니다.
           </p>
         </div>
         <button type="button" className="audit-run-button" onClick={handleRun} disabled={isRunning}>
           {isRunning ? <LoaderCircle size={16} className="spin" /> : <GitCompareArrows size={16} />}
-          <span>{isRunning ? 'Detecting drift…' : 'Run drift detection'}</span>
+          <span>{isRunning ? '탐지 중…' : '드리프트 탐지 실행'}</span>
         </button>
       </section>
 
@@ -130,16 +130,16 @@ export function DriftPage() {
       <section className="drift-config-panel">
         <div className="drift-mode-tabs">
           <button type="button" className={mode === 'path' ? 'active' : ''} onClick={() => setMode('path')}>
-            Local path
+            로컬 경로
           </button>
           <button type="button" className={mode === 'inline' ? 'active' : ''} onClick={() => setMode('inline')}>
-            Inline JSON
+            JSON 직접 입력
           </button>
         </div>
 
         {mode === 'path' ? (
           <label className="drift-input-group">
-            <span>State file path</span>
+            <span>상태 파일 경로</span>
             <input
               type="text"
               value={statePath}
@@ -149,7 +149,7 @@ export function DriftPage() {
           </label>
         ) : (
           <label className="drift-input-group">
-            <span>Raw Terraform state JSON</span>
+            <span>Terraform state JSON</span>
             <textarea
               value={rawStateJson}
               onChange={(event) => setRawStateJson(event.target.value)}
@@ -162,19 +162,19 @@ export function DriftPage() {
 
       <section className="timeline-summary-grid">
         <div className="timeline-summary-card">
-          <span>Total items</span>
+          <span>전체 항목</span>
           <strong>{latestDrift?.totalItems ?? 0}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Missing</span>
+          <span>AWS에 없음</span>
           <strong>{latestDrift?.missingCount ?? 0}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Modified</span>
+          <span>AWS에서 변경됨</span>
           <strong>{latestDrift?.modifiedCount ?? 0}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Unmanaged</span>
+          <span>미관리 리소스</span>
           <strong>{latestDrift?.unmanagedCount ?? 0}</strong>
         </div>
       </section>
@@ -183,17 +183,17 @@ export function DriftPage() {
         <div className="drift-meta-card">
           <FileJson2 size={16} />
           <span>
-            Last run from <strong>{latestDrift.sourceName}</strong> · {new Date(latestDrift.generatedAt).toLocaleString()}
+            마지막 실행 <strong>{latestDrift.sourceName}</strong> · {new Date(latestDrift.generatedAt).toLocaleString()}
           </span>
         </div>
       ) : (
-        <div className="drift-empty-card">No drift report yet.</div>
+        <div className="drift-empty-card">아직 드리프트 리포트가 없습니다.</div>
       )}
 
       <div className="drift-layout">
-        <DriftBucket title="Missing from AWS" items={grouped.missing} onOpenTopology={openTopology} />
-        <DriftBucket title="Modified in AWS" items={grouped.modified} onOpenTopology={openTopology} />
-        <DriftBucket title="Unmanaged resources" items={grouped.unmanaged} onOpenTopology={openTopology} />
+        <DriftBucket title="AWS에 없는 리소스" items={grouped.missing} onOpenTopology={openTopology} />
+        <DriftBucket title="AWS에서 변경된 리소스" items={grouped.modified} onOpenTopology={openTopology} />
+        <DriftBucket title="코드에 없는 리소스" items={grouped.unmanaged} onOpenTopology={openTopology} />
       </div>
     </div>
   );

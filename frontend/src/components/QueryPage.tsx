@@ -50,7 +50,7 @@ function resultTitle(row: Record<string, unknown>) {
     || value(row, 'name')
     || value(row, 'databaseName')
     || value(row, 'environment')
-    || 'Result';
+    || '결과';
 }
 
 function resultCaption(row: Record<string, unknown>) {
@@ -90,7 +90,7 @@ function QuerySubgraph({
     return (
       <div className="query-subgraph-empty">
         <Bot size={18} />
-        <p>This query returned a tabular answer without a focused subgraph.</p>
+        <p>이번 질의는 표 형태 결과만 반환되어, 함께 강조할 서브그래프는 없습니다.</p>
       </div>
     );
   }
@@ -115,9 +115,9 @@ function QuerySubgraph({
         </ReactFlow>
       </ReactFlowProvider>
       <div className="query-subgraph-meta">
-        <span>{graph.metadata.totalNodes} nodes</span>
-        <span>{graph.metadata.totalEdges} edges</span>
-        {selectedArn && nodesById.has(selectedArn) ? <span>focused: {value(nodesById.get(selectedArn)!.data, 'name') || selectedArn}</span> : null}
+        <span>{graph.metadata.totalNodes}개 노드</span>
+        <span>{graph.metadata.totalEdges}개 연결</span>
+        {selectedArn && nodesById.has(selectedArn) ? <span>포커스: {value(nodesById.get(selectedArn)!.data, 'name') || selectedArn}</span> : null}
       </div>
     </div>
   );
@@ -150,7 +150,7 @@ export function QueryPage() {
         .find((candidate): candidate is string => Boolean(candidate));
       setSelectedArn(firstArn ?? response.clarificationOptions[0]?.arn ?? null);
     } catch (error) {
-      setQueryError(error instanceof Error ? error.message : 'Query execution failed');
+      setQueryError(error instanceof Error ? error.message : '질의 실행에 실패했습니다.');
       setQueryResponse(null);
       setSelectedArn(null);
     } finally {
@@ -164,9 +164,9 @@ export function QueryPage() {
     try {
       const generated = await generateLabels();
       await mutateLabels(generated, { revalidate: false });
-      setLabelMessage(`${generated.length} labels are now available on the topology.`);
+      setLabelMessage(`${generated.length}개의 티어 라벨을 인프라 맵에서 바로 사용할 수 있습니다.`);
     } catch (error) {
-      setLabelMessage(error instanceof Error ? error.message : 'Tier labels could not be generated.');
+      setLabelMessage(error instanceof Error ? error.message : '티어 라벨을 생성하지 못했습니다.');
     } finally {
       setIsGeneratingLabels(false);
     }
@@ -178,8 +178,8 @@ export function QueryPage() {
       const nextSummary = await generateArchitectureSummary(summaryLanguage);
       setSummary(nextSummary);
     } catch (error) {
-      setSummary({
-        summary: error instanceof Error ? error.message : 'Architecture summary generation failed.',
+        setSummary({
+        summary: error instanceof Error ? error.message : '아키텍처 요약 생성에 실패했습니다.',
         language: summaryLanguage,
         generatedAt: new Date().toISOString(),
       });
@@ -203,20 +203,20 @@ export function QueryPage() {
     <div className="query-page">
       <section className="query-hero">
         <div>
-          <p className="query-eyebrow">Phase 3 Query Layer</p>
-          <h2>Ask the graph in operator language</h2>
+          <p className="query-eyebrow">질의 레이어</p>
+          <h2>운영자 언어로 그래프에 질문하기</h2>
           <p className="query-copy">
-            Natural-language questions run through schema-aware Cypher validation first, then return a concise answer and subgraph.
+            자연어 질문을 스키마 기반 Cypher 검증으로 먼저 정리한 뒤, 요약 답변과 서브그래프를 함께 보여줍니다.
           </p>
         </div>
         <div className="query-hero-actions">
           <button type="button" className="ghost-button" onClick={() => void handleGenerateLabels()} disabled={isGeneratingLabels}>
             {isGeneratingLabels ? <LoaderCircle size={14} className="spin" /> : <BrainCircuit size={14} />}
-            {isGeneratingLabels ? 'Generating tiers…' : `Generate tiers (${labelCoverage})`}
+            {isGeneratingLabels ? '티어 생성 중…' : `티어 라벨 생성 (${labelCoverage})`}
           </button>
           <button type="button" className="ghost-button primary-button" onClick={() => void handleGenerateSummary()} disabled={isGeneratingSummary}>
             {isGeneratingSummary ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />}
-            {isGeneratingSummary ? 'Summarizing…' : 'Generate summary'}
+            {isGeneratingSummary ? '요약 생성 중…' : '아키텍처 요약 생성'}
           </button>
         </div>
       </section>
@@ -238,7 +238,7 @@ export function QueryPage() {
         </div>
         <button type="button" className="query-run-button" onClick={() => void handleRunQuery()} disabled={isRunning}>
           {isRunning ? <LoaderCircle size={15} className="spin" /> : <Bot size={15} />}
-          <span>{isRunning ? 'Running…' : 'Run query'}</span>
+          <span>{isRunning ? '실행 중…' : '질의 실행'}</span>
         </button>
       </section>
 
@@ -275,26 +275,26 @@ export function QueryPage() {
         <section className="query-results-panel">
           <div className="query-panel-header">
             <div>
-              <p className="query-panel-title">Result summary</p>
+              <p className="query-panel-title">결과 요약</p>
               <p className="query-panel-copy">
-                {queryResponse?.explanation ?? 'Run one of the example queries or ask a question in Korean or English.'}
+                {queryResponse?.explanation ?? '예시 질의를 실행하거나 한국어/영어로 질문해 보세요.'}
               </p>
             </div>
             {queryResponse?.truncated ? (
-              <span className="query-summary-pill">top {queryResponse.totalEstimate}</span>
+              <span className="query-summary-pill">상위 {queryResponse.totalEstimate}건</span>
             ) : null}
           </div>
 
           {queryResponse?.generatedCypher ? (
             <div className="query-cypher-card">
-              <span className="query-card-label">Generated Cypher</span>
+              <span className="query-card-label">생성된 Cypher</span>
               <pre>{queryResponse.generatedCypher}</pre>
             </div>
           ) : null}
 
           {queryResponse?.clarificationNeeded ? (
             <div className="query-clarification-card">
-              <span className="query-card-label">Clarification</span>
+              <span className="query-card-label">추가 확인</span>
               <div className="query-clarification-list">
                 {queryResponse.clarificationOptions.map((option) => (
                   <button
@@ -315,8 +315,8 @@ export function QueryPage() {
             {(queryResponse?.results ?? []).length === 0 ? (
               <div className="query-empty-state">
                 <Bot size={18} />
-                <p>No query results yet.</p>
-                <span>Try “prod vs staging 차이가 뭐야?” or “dongne-prod-db를 쓰는 서비스 보여줘”.</span>
+                <p>아직 질의 결과가 없습니다.</p>
+                <span>예: “prod vs staging 차이가 뭐야?” 또는 “dongne-prod-db를 쓰는 서비스 보여줘”</span>
               </div>
             ) : (
               queryResponse?.results.map((row, index) => {
@@ -327,11 +327,11 @@ export function QueryPage() {
                     type="button"
                     className="query-result-card"
                     data-selected={arn != null && arn === selectedArn}
-                    onClick={() => setSelectedArn(arn)}
+                    onClick={() => setSelectedArn(arn ?? null)}
                   >
                     <div className="query-result-copy">
                       <p className="query-result-title">{resultTitle(row)}</p>
-                      <p className="query-result-caption">{resultCaption(row) || 'graph result'}</p>
+                      <p className="query-result-caption">{resultCaption(row) || '그래프 결과'}</p>
                       {resultDetail(row) ? <p className="query-result-detail">{resultDetail(row)}</p> : null}
                     </div>
                     {arn ? (
@@ -342,7 +342,7 @@ export function QueryPage() {
                           openInTopology(arn);
                         }}
                       >
-                        Open
+                        보기
                       </span>
                     ) : null}
                   </button>
@@ -356,27 +356,27 @@ export function QueryPage() {
           <section className="query-summary-card">
             <div className="query-panel-header">
               <div>
-                <p className="query-panel-title">Architecture summary</p>
-                <p className="query-panel-copy">Generate a Korean or English overview from the current graph.</p>
+                <p className="query-panel-title">아키텍처 요약</p>
+                <p className="query-panel-copy">현재 그래프를 기준으로 한국어 또는 영어 개요를 생성합니다.</p>
               </div>
               <select value={summaryLanguage} onChange={(event) => setSummaryLanguage(event.target.value as 'ko' | 'en')}>
                 <option value="ko">한국어</option>
                 <option value="en">English</option>
               </select>
             </div>
-            <p>{summary?.summary ?? 'No summary generated yet. Use the button above when you want a one-shot overview.'}</p>
+            <p>{summary?.summary ?? '아직 생성된 요약이 없습니다. 필요할 때 위 버튼으로 한 번에 만들 수 있습니다.'}</p>
           </section>
 
           <section className="query-summary-card">
             <div className="query-panel-header">
               <div>
-                <p className="query-panel-title">Tier labels</p>
-                <p className="query-panel-copy">Generated labels appear on topology cards and tier filters.</p>
+                <p className="query-panel-title">티어 라벨</p>
+                <p className="query-panel-copy">생성된 라벨은 인프라 맵 카드와 티어 필터에 반영됩니다.</p>
               </div>
             </div>
             <div className="query-tier-list">
               {(labels ?? []).length === 0 ? (
-                <p className="query-side-copy">No tier labels yet.</p>
+                <p className="query-side-copy">아직 티어 라벨이 없습니다.</p>
               ) : (
                 labels?.slice(0, 8).map((label) => (
                   <div key={label.arn} className="query-tier-row">
@@ -393,8 +393,8 @@ export function QueryPage() {
       <section className="query-subgraph-panel">
         <div className="query-panel-header">
           <div>
-            <p className="query-panel-title">Subgraph</p>
-            <p className="query-panel-copy">Query matches are narrowed to a one-hop subgraph for quick visual confirmation.</p>
+            <p className="query-panel-title">서브그래프</p>
+            <p className="query-panel-copy">질의 결과와 직접 연결된 한 단계 주변 그래프만 좁혀서 빠르게 확인합니다.</p>
           </div>
         </div>
         <QuerySubgraph response={queryResponse} selectedArn={selectedArn} />

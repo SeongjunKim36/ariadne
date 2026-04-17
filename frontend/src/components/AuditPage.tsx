@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import { ArrowRight, LoaderCircle, ShieldAlert, Sparkles, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
@@ -12,14 +11,15 @@ import {
   runAudit,
 } from '../lib/api';
 import type { AuditFinding, RiskLevel } from '../lib/types';
+import { formatRelativeTime } from '../lib/uiCopy';
 
 const CATEGORY_OPTIONS = [
-  { id: 'all', label: 'All' },
-  { id: 'security-group', label: 'SG' },
+  { id: 'all', label: '전체' },
+  { id: 'security-group', label: '보안 그룹' },
   { id: 'iam', label: 'IAM' },
-  { id: 'network', label: 'Network' },
+  { id: 'network', label: '네트워크' },
   { id: 's3', label: 'S3' },
-  { id: 'encryption', label: 'Encryption' },
+  { id: 'encryption', label: '암호화' },
 ];
 
 function riskTone(level: RiskLevel) {
@@ -32,6 +32,19 @@ function riskTone(level: RiskLevel) {
       return 'low';
     default:
       return 'low';
+  }
+}
+
+function riskLabel(level: RiskLevel) {
+  switch (level) {
+    case 'HIGH':
+      return '높음';
+    case 'MEDIUM':
+      return '중간';
+    case 'LOW':
+      return '낮음';
+    default:
+      return level;
   }
 }
 
@@ -73,7 +86,7 @@ export function AuditPage() {
       await mutateExplanation();
       setSelectedFindingId(report.findings[0]?.id ?? null);
     } catch (error) {
-      setRunError(error instanceof Error ? error.message : 'Audit run failed');
+      setRunError(error instanceof Error ? error.message : '보안 점검 실행에 실패했습니다.');
     } finally {
       setIsRunning(false);
     }
@@ -88,15 +101,15 @@ export function AuditPage() {
     <div className="audit-page">
       <section className="audit-hero">
         <div>
-          <p className="audit-eyebrow">Phase 3 Audit</p>
-          <h2>Rule-driven risk dashboard</h2>
+          <p className="audit-eyebrow">보안 점검</p>
+          <h2>규칙 기반 위험 대시보드</h2>
           <p className="audit-copy">
-            Deterministic checks run on the live graph first, then the explanation layer helps prioritize the fixes.
+            현재 그래프에 규칙 기반 점검을 먼저 실행하고, 설명 레이어가 우선 조치 대상을 정리해 줍니다.
           </p>
         </div>
         <button type="button" className="audit-run-button" onClick={handleRunAudit} disabled={isRunning}>
           {isRunning ? <LoaderCircle size={16} className="spin" /> : <ShieldAlert size={16} />}
-          <span>{isRunning ? 'Running audit…' : 'Run audit'}</span>
+          <span>{isRunning ? '점검 실행 중…' : '보안 점검 실행'}</span>
         </button>
       </section>
 
@@ -109,27 +122,27 @@ export function AuditPage() {
 
       {latestAudit ? (
         <p className="audit-meta">
-          Last run {formatDistanceToNow(new Date(latestAudit.runAt), { addSuffix: true })} · {latestAudit.totalFindings} findings
+          마지막 실행 {formatRelativeTime(latestAudit.runAt)} · 총 {latestAudit.totalFindings}건
         </p>
       ) : (
-        <p className="audit-meta">No audit report yet. Run the first audit to populate findings.</p>
+        <p className="audit-meta">아직 점검 리포트가 없습니다. 첫 점검을 실행해 결과를 채워 주세요.</p>
       )}
 
       <section className="audit-summary-grid">
         <div className="audit-summary-card high">
-          <span>HIGH</span>
+          <span>높음</span>
           <strong>{latestAudit?.highCount ?? 0}</strong>
         </div>
         <div className="audit-summary-card medium">
-          <span>MEDIUM</span>
+          <span>중간</span>
           <strong>{latestAudit?.mediumCount ?? 0}</strong>
         </div>
         <div className="audit-summary-card low">
-          <span>LOW</span>
+          <span>낮음</span>
           <strong>{latestAudit?.lowCount ?? 0}</strong>
         </div>
         <div className="audit-summary-card neutral">
-          <span>Rules</span>
+          <span>규칙 수</span>
           <strong>{rules?.length ?? 0}</strong>
         </div>
       </section>
@@ -156,7 +169,7 @@ export function AuditPage() {
               className={selectedLevel === level ? 'active' : ''}
               onClick={() => setSelectedLevel(level)}
             >
-              {level}
+              {level === 'ALL' ? '전체' : level === 'HIGH' ? '높음' : level === 'MEDIUM' ? '중간' : '낮음'}
             </button>
           ))}
         </div>
@@ -166,8 +179,8 @@ export function AuditPage() {
         <section className="audit-findings-panel">
           <div className="audit-panel-header">
             <div>
-              <p className="audit-panel-title">Findings</p>
-              <p className="audit-panel-copy">Click a finding to inspect the remediation and jump back to topology.</p>
+              <p className="audit-panel-title">점검 결과</p>
+              <p className="audit-panel-copy">항목을 클릭하면 근거와 대응 방향을 보고 인프라 맵으로 이동할 수 있습니다.</p>
             </div>
           </div>
 
@@ -175,7 +188,7 @@ export function AuditPage() {
             {(findings ?? []).length === 0 ? (
               <div className="audit-empty-state">
                 <ShieldAlert size={18} />
-                <p>No findings match the current filter.</p>
+                <p>현재 필터에 맞는 점검 결과가 없습니다.</p>
               </div>
             ) : (
               (findings ?? []).map((finding) => (
@@ -189,7 +202,7 @@ export function AuditPage() {
                 >
                   <div className="audit-finding-header">
                     <span className="audit-risk-pill" data-tone={riskTone(finding.riskLevel)}>
-                      {finding.riskLevel}
+                      {riskLabel(finding.riskLevel)}
                     </span>
                     <span className="audit-rule-pill">{finding.ruleId}</span>
                   </div>
@@ -211,16 +224,16 @@ export function AuditPage() {
                   <p className="audit-panel-copy">{selectedFinding.resourceName} · {selectedFinding.resourceType}</p>
                 </div>
                 <button type="button" className="audit-link-button" onClick={() => openInTopology(selectedFinding)}>
-                  <span>Open on topology</span>
+                  <span>인프라 맵에서 보기</span>
                   <ArrowRight size={15} />
                 </button>
               </div>
 
               <div className="audit-detail-block">
-                <span className="audit-detail-label">Risk</span>
+                <span className="audit-detail-label">위험도</span>
                 <div className="audit-inline-pills">
                   <span className="audit-risk-pill" data-tone={riskTone(selectedFinding.riskLevel)}>
-                    {selectedFinding.riskLevel}
+                    {riskLabel(selectedFinding.riskLevel)}
                   </span>
                   <span className="audit-rule-pill">{selectedFinding.ruleId}</span>
                 </div>
@@ -228,13 +241,13 @@ export function AuditPage() {
 
               {selectedFinding.secondaryName || selectedFinding.detail ? (
                 <div className="audit-detail-block">
-                  <span className="audit-detail-label">Evidence</span>
+                  <span className="audit-detail-label">근거</span>
                   <p>{[selectedFinding.secondaryName, selectedFinding.detail].filter(Boolean).join(' · ')}</p>
                 </div>
               ) : null}
 
               <div className="audit-detail-block">
-                <span className="audit-detail-label">Remediation</span>
+                <span className="audit-detail-label">대응 가이드</span>
                 <p>{selectedFinding.remediationHint}</p>
               </div>
 
@@ -242,7 +255,7 @@ export function AuditPage() {
                 <div className="audit-explanation-card">
                   <div className="audit-explanation-header">
                     <Sparkles size={16} />
-                    <span>Audit explanation</span>
+                    <span>설명 요약</span>
                   </div>
                   <p>{explanation.summary}</p>
                   {explanation.priorities.length > 0 ? (
@@ -265,7 +278,7 @@ export function AuditPage() {
           ) : (
             <div className="audit-empty-state">
               <ShieldAlert size={18} />
-              <p>Select a finding to review the remediation path.</p>
+              <p>점검 결과를 선택하면 대응 경로를 자세히 볼 수 있습니다.</p>
             </div>
           )}
         </aside>

@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatDistanceToNow, subHours } from 'date-fns';
+import { subHours } from 'date-fns';
 import { ArrowRight, GitBranchPlus, GitCommitVertical, GitPullRequestArrow, Layers3, LoaderCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 
 import { fetchEventLogs, fetchLatestSnapshotDiff, fetchSnapshotDiff, fetchSnapshots, fetchTimeline } from '../lib/api';
 import type { NodeDiffResponse } from '../lib/types';
+import { formatRelativeTime } from '../lib/uiCopy';
 
 const PERIOD_OPTIONS = [
   { id: '24h', label: '24h' },
   { id: '7d', label: '7d' },
   { id: '30d', label: '30d' },
-  { id: 'custom', label: 'Custom' },
+  { id: 'custom', label: '직접 선택' },
 ];
 
 function toLocalInputValue(date: Date) {
@@ -35,24 +36,24 @@ function ChangeListSection({
       <div className="timeline-section-header">
         <div>
           <p className="timeline-section-title">{title}</p>
-          <p className="timeline-section-copy">{items.length} resources</p>
+          <p className="timeline-section-copy">{items.length}개 리소스</p>
         </div>
       </div>
 
       {items.length === 0 ? (
-        <div className="timeline-empty-card">No changes in this bucket.</div>
+        <div className="timeline-empty-card">이 구간에는 변경 사항이 없습니다.</div>
       ) : (
         <div className="timeline-change-list">
           {items.map((item) => (
             <article key={`${title}-${item.arn ?? item.name ?? Math.random()}`} className="timeline-change-card" data-tone={tone}>
               <div className="timeline-change-card-head">
                 <div>
-                  <p className="timeline-change-title">{item.name ?? item.arn ?? 'Unnamed resource'}</p>
-                  <p className="timeline-change-meta">{item.resourceType ?? 'UNKNOWN'} · {item.arn ?? 'no-arn'}</p>
+                  <p className="timeline-change-title">{item.name ?? item.arn ?? '이름 없는 리소스'}</p>
+                  <p className="timeline-change-meta">{item.resourceType ?? '알 수 없음'} · {item.arn ?? 'ARN 없음'}</p>
                 </div>
                 {item.arn ? (
                   <button type="button" className="timeline-link-button" onClick={() => onOpenTopology(item.arn!)}>
-                    <span>Topology</span>
+                    <span>인프라 맵</span>
                     <ArrowRight size={14} />
                   </button>
                 ) : null}
@@ -71,8 +72,8 @@ function ChangeListSection({
               ) : (
                 <p className="timeline-change-copy">
                   {item.changeType === 'ADDED'
-                    ? 'New resource appeared in the latest snapshot.'
-                    : 'Resource disappeared from the latest snapshot.'}
+                    ? '최신 스냅샷에 새 리소스가 나타났습니다.'
+                    : '최신 스냅샷에서 리소스가 사라졌습니다.'}
                 </p>
               )}
             </article>
@@ -178,10 +179,10 @@ export function TimelinePage() {
     <div className="timeline-page">
       <section className="timeline-hero">
         <div>
-          <p className="timeline-eyebrow">Phase 4 Timeline</p>
-          <h2>Snapshot history and graph diffs</h2>
+          <p className="timeline-eyebrow">변경 이력</p>
+          <h2>스냅샷 이력과 그래프 차이</h2>
           <p className="timeline-copy">
-            Compare snapshots over time, inspect the exact resource changes, and keep the event stream beside the graph.
+            시간대별 스냅샷을 비교하고, 실제로 어떤 리소스가 바뀌었는지 이벤트 흐름과 함께 확인합니다.
           </p>
         </div>
         <div className="timeline-period-tabs">
@@ -201,7 +202,7 @@ export function TimelinePage() {
       {period === 'custom' ? (
         <section className="timeline-custom-range">
           <div className="timeline-selector-group">
-            <label htmlFor="timeline-custom-from">From</label>
+            <label htmlFor="timeline-custom-from">시작</label>
             <input
               id="timeline-custom-from"
               type="datetime-local"
@@ -210,7 +211,7 @@ export function TimelinePage() {
             />
           </div>
           <div className="timeline-selector-group">
-            <label htmlFor="timeline-custom-to">To</label>
+            <label htmlFor="timeline-custom-to">끝</label>
             <input
               id="timeline-custom-to"
               type="datetime-local"
@@ -223,28 +224,28 @@ export function TimelinePage() {
 
       <section className="timeline-summary-grid">
         <div className="timeline-summary-card">
-          <span>Snapshots</span>
+          <span>스냅샷 수</span>
           <strong>{snapshots?.length ?? 0}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Latest changes</span>
+          <span>최신 변경 수</span>
           <strong>{activeDiff?.totalChanges ?? 0}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Last diff</span>
-          <strong>{activeDiff ? formatDistanceToNow(new Date(activeDiff.diffedAt), { addSuffix: true }) : 'none yet'}</strong>
+          <span>마지막 비교</span>
+          <strong>{activeDiff ? formatRelativeTime(activeDiff.diffedAt) : '아직 없음'}</strong>
         </div>
         <div className="timeline-summary-card">
-          <span>Event feed</span>
+          <span>이벤트 수</span>
           <strong>{eventLogs?.length ?? 0}</strong>
         </div>
       </section>
 
       <section className="timeline-selector-panel">
         <div className="timeline-selector-group">
-          <label htmlFor="snapshot-from">From</label>
+          <label htmlFor="snapshot-from">기준 스냅샷</label>
           <select id="snapshot-from" value={selectedFrom ?? ''} onChange={(event) => setSelectedFrom(Number(event.target.value))}>
-            <option value="" disabled>Select base snapshot</option>
+            <option value="" disabled>기준 스냅샷 선택</option>
             {(snapshots ?? []).map((snapshot) => (
               <option key={snapshot.id} value={snapshot.id}>
                 #{snapshot.id} · {new Date(snapshot.capturedAt).toLocaleString()}
@@ -253,9 +254,9 @@ export function TimelinePage() {
           </select>
         </div>
         <div className="timeline-selector-group">
-          <label htmlFor="snapshot-to">To</label>
+          <label htmlFor="snapshot-to">비교 스냅샷</label>
           <select id="snapshot-to" value={selectedTo ?? ''} onChange={(event) => setSelectedTo(Number(event.target.value))}>
-            <option value="" disabled>Select target snapshot</option>
+            <option value="" disabled>비교 스냅샷 선택</option>
             {(snapshots ?? []).map((snapshot) => (
               <option key={snapshot.id} value={snapshot.id}>
                 #{snapshot.id} · {new Date(snapshot.capturedAt).toLocaleString()}
@@ -266,7 +267,7 @@ export function TimelinePage() {
         {isDiffLoading ? (
           <div className="timeline-loading-pill">
             <LoaderCircle size={15} className="spin" />
-            <span>Loading diff…</span>
+            <span>차이 정보를 불러오는 중…</span>
           </div>
         ) : null}
       </section>
@@ -288,7 +289,7 @@ export function TimelinePage() {
             >
               <span className="timeline-point-dot" />
               <span className="timeline-point-time">{new Date(entry.capturedAt).toLocaleString()}</span>
-              <span className="timeline-point-meta">{entry.totalChanges} changes · {entry.triggerSource}</span>
+              <span className="timeline-point-meta">{entry.totalChanges}건 변경 · {entry.triggerSource}</span>
             </button>
           ))}
         </div>
@@ -298,11 +299,11 @@ export function TimelinePage() {
         <section className="timeline-main-panel">
           <div className="timeline-panel-header">
             <div>
-              <p className="timeline-panel-title">Diff summary</p>
+              <p className="timeline-panel-title">차이 요약</p>
               <p className="timeline-panel-copy">
                 {activeDiff
-                  ? `Base #${activeDiff.baseSnapshot.id} → Target #${activeDiff.targetSnapshot.id}`
-                  : 'Run a couple of scans to start accumulating diffs.'}
+                  ? `기준 #${activeDiff.baseSnapshot.id} → 비교 #${activeDiff.targetSnapshot.id}`
+                  : '스캔을 몇 번 더 실행하면 변경 이력을 쌓아갈 수 있습니다.'}
               </p>
             </div>
           </div>
@@ -312,59 +313,59 @@ export function TimelinePage() {
               <div className="timeline-diff-metrics">
                 <div className="timeline-metric-card added">
                   <GitBranchPlus size={16} />
-                  <span>Added</span>
+                  <span>추가</span>
                   <strong>{activeDiff.addedCount}</strong>
                 </div>
                 <div className="timeline-metric-card removed">
                   <GitPullRequestArrow size={16} />
-                  <span>Removed</span>
+                  <span>삭제</span>
                   <strong>{activeDiff.removedCount}</strong>
                 </div>
                 <div className="timeline-metric-card modified">
                   <GitCommitVertical size={16} />
-                  <span>Modified</span>
+                  <span>변경</span>
                   <strong>{activeDiff.modifiedCount}</strong>
                 </div>
                 <div className="timeline-metric-card neutral">
                   <Layers3 size={16} />
-                  <span>Total</span>
+                  <span>전체</span>
                   <strong>{activeDiff.totalChanges}</strong>
                 </div>
               </div>
 
-              <ChangeListSection title="Added resources" items={changeSlices.added} tone="added" onOpenTopology={openTopology} />
-              <ChangeListSection title="Removed resources" items={changeSlices.removed} tone="removed" onOpenTopology={openTopology} />
-              <ChangeListSection title="Modified resources" items={changeSlices.modified} tone="modified" onOpenTopology={openTopology} />
+              <ChangeListSection title="추가된 리소스" items={changeSlices.added} tone="added" onOpenTopology={openTopology} />
+              <ChangeListSection title="삭제된 리소스" items={changeSlices.removed} tone="removed" onOpenTopology={openTopology} />
+              <ChangeListSection title="변경된 리소스" items={changeSlices.modified} tone="modified" onOpenTopology={openTopology} />
             </>
           ) : (
-            <div className="timeline-empty-card">No diff is available yet.</div>
+            <div className="timeline-empty-card">아직 비교 가능한 차이 정보가 없습니다.</div>
           )}
         </section>
 
         <aside className="timeline-side-panel">
           <div className="timeline-panel-header">
             <div>
-              <p className="timeline-panel-title">Recent events</p>
-              <p className="timeline-panel-copy">EventBridge ingestion stays optional, but the feed is ready.</p>
+              <p className="timeline-panel-title">최근 이벤트</p>
+              <p className="timeline-panel-copy">EventBridge 연동은 선택 사항이지만, 이벤트 피드는 바로 확인할 수 있습니다.</p>
             </div>
           </div>
           <div className="timeline-event-list">
             {(eventLogs ?? []).length === 0 ? (
-              <div className="timeline-empty-card">No event logs yet.</div>
+              <div className="timeline-empty-card">아직 수집된 이벤트 로그가 없습니다.</div>
             ) : (
               (eventLogs ?? []).slice(0, 20).map((event) => (
                 <article key={event.id} className="timeline-event-card" data-status={event.status.toLowerCase()}>
                   <div className="timeline-event-head">
                     <span className="timeline-event-status">{event.status}</span>
                     <span className="timeline-event-age">
-                      {formatDistanceToNow(new Date(event.receivedAt), { addSuffix: true })}
+                      {formatRelativeTime(event.receivedAt)}
                     </span>
                   </div>
                   <p className="timeline-event-title">{event.action ?? event.detailType}</p>
-                  <p className="timeline-event-copy">{event.source} · {event.resourceType ?? 'unknown resource'}</p>
+                  <p className="timeline-event-copy">{event.source} · {event.resourceType ?? '알 수 없는 리소스'}</p>
                   {event.resourceArn ? (
                     <button type="button" className="timeline-link-button subtle" onClick={() => openTopology(event.resourceArn!)}>
-                      <span>Open resource</span>
+                      <span>리소스 열기</span>
                       <ArrowRight size={14} />
                     </button>
                   ) : null}
